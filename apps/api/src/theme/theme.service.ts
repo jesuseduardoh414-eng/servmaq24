@@ -1,0 +1,22 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { prisma } from '@servmaq/db';
+import { themeSchema, type Theme } from '@servmaq/config';
+
+@Injectable()
+export class ThemeService {
+  /** Tema activo con tokens/copys PUBLICADOS (lo que ve el sitio). */
+  async getActive(): Promise<Theme> {
+    const row = await prisma.theme.findFirst({ where: { active: true } });
+    if (!row) throw new NotFoundException('No hay tema activo configurado');
+
+    // Validar contra el schema compartido: si el registro está corrupto,
+    // mejor fallar aquí que renderizar una UI rota.
+    return themeSchema.parse({
+      slug: row.slug,
+      name: row.name,
+      active: row.active,
+      tokens: row.tokens,
+      copys: row.copys,
+    });
+  }
+}

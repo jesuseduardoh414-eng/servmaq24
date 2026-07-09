@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.next/
+.turbo/
+*.log
+
+# Entorno — nunca versionar credenciales (lección del proyecto anterior)
+.env
+.env.*
+!.env.example
+
+# Prisma
+packages/db/generated/

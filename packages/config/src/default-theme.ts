@@ -1,0 +1,87 @@
+import type { Theme } from './schema';
+
+/**
+ * Tema por defecto: "maquinaria" (el sector activo del sitio actual).
+ * Sirve como semilla de la tabla `themes` y como fallback si la API no responde.
+ * TODOS los valores son editables desde el admin — esto es solo el punto de partida.
+ */
+export const defaultTheme: Theme = {
+  slug: 'maquinaria',
+  name: 'Maquinaria (default)',
+  active: true,
+  tokens: {
+    colors: {
+      light: {
+        primary: '#B45309',
+        primaryFg: '#FFFFFF',
+        secondary: '#334155',
+        accent: '#D97706',
+        background: '#F8FAFC',
+        surface: '#FFFFFF',
+        text: '#0F172A',
+        textMuted: '#64748B',
+        border: '#E2E8F0',
+        success: '#15803D',
+        warning: '#A16207',
+        error: '#B91C1C',
+      },
+      dark: {
+        primary: '#F59E0B',
+        primaryFg: '#1C1917',
+        secondary: '#94A3B8',
+        accent: '#FBBF24',
+        background: '#0B1220',
+        surface: '#111A2C',
+        text: '#E2E8F0',
+        textMuted: '#94A3B8',
+        border: '#1E293B',
+        success: '#4ADE80',
+        warning: '#FACC15',
+        error: '#F87171',
+      },
+    },
+    typography: {
+      fontSans: 'Inter',
+      fontHeading: 'Inter',
+      baseSizePx: 16,
+      scaleRatio: 1.25,
+    },
+    shape: {
+      radiusSm: '4px',
+      radiusMd: '8px',
+      radiusLg: '14px',
+      buttonStyle: 'solid',
+      buttonRadius: '8px',
+    },
+    sections: [
+      { key: 'home.hero', enabled: true, order: 0 },
+      { key: 'home.categories', enabled: true, order: 1 },
+      { key: 'home.featured-products', enabled: true, order: 2 },
+      { key: 'home.strategic-sectors', enabled: true, order: 3 },
+      { key: 'home.why-choose-us', enabled: true, order: 4 },
+      { key: 'home.services', enabled: true, order: 5 },
+      { key: 'home.banners', enabled: true, order: 6 },
+      { key: 'home.blog', enabled: true, order: 7 },
+      { key: 'home.reviews', enabled: true, order: 8 },
+      { key: 'home.faq', enabled: true, order: 9 },
+    ],
+    quoteMode: false,
+  },
+  copys: {
+    es: {
+      'site.name': 'Scava',
+      'home.hero.title': 'Maquinaria y equipo para tu proyecto',
+      'home.hero.subtitle': 'Venta y renta de maquinaria con cobertura nacional',
+      'home.hero.cta': 'Ver catálogo',
+      'product.cta.buy': 'Comprar ahora',
+      'product.cta.addToCart': 'Añadir al carrito',
+      'product.cta.quote': 'Solicitar cotización',
+      'product.price.onQuote': 'Precio bajo cotización',
+      'nav.products': 'Productos',
+      'nav.categories': 'Categorías',
+      'nav.blog': 'Blog',
+      'nav.contact': 'Contacto',
+      'footer.rights': 'Todos los derechos reservados',
+    },
+  },
+};
