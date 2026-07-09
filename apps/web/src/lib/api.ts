@@ -1,4 +1,19 @@
-import type { Category, Paginated, ProductCard, ProductDetail, SiteSettings } from '@servmaq/types';
+import type {
+  BannerSet,
+  BlogCard,
+  BlogDetail,
+  Category,
+  HomeHero,
+  Paginated,
+  ProductCard,
+  ProductDetail,
+  ServiceItem,
+  SiteReview,
+  SiteSettings,
+  StrategicSector,
+  StrategicSectorDetail,
+  WhyChooseUsItem,
+} from '@servmaq/types';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -37,4 +52,42 @@ export function getCategories(): Promise<Category[]> {
 
 export function getSiteSettings(): Promise<SiteSettings> {
   return get('/settings/site');
+}
+
+// ---- Contenido de home / CMS ligero ----
+
+export function getHero(): Promise<HomeHero | null> {
+  return get('/content/hero');
+}
+
+export function getSectors(): Promise<StrategicSector[]> {
+  return get('/content/sectors');
+}
+
+export function getSector(id: number): Promise<StrategicSectorDetail> {
+  return get(`/content/sectors/${id}`);
+}
+
+export function getWhyChooseUs(): Promise<WhyChooseUsItem[]> {
+  return get('/content/why-choose-us');
+}
+
+export function getServices(): Promise<ServiceItem[]> {
+  return get('/content/services');
+}
+
+export function getBanners(): Promise<BannerSet> {
+  return get('/content/banners');
+}
+
+export function getBlogs(limit = 3): Promise<BlogCard[]> {
+  return get(`/content/blogs?limit=${limit}`);
+}
+
+export function getBlog(id: number): Promise<BlogDetail> {
+  return get(`/content/blogs/${id}`);
+}
+
+export function getReviews(limit = 6): Promise<SiteReview[]> {
+  return get(`/content/reviews?limit=${limit}`);
 }
