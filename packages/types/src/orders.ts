@@ -23,6 +23,8 @@ export interface CheckoutItemInput {
 export interface CheckoutInput {
   items: CheckoutItemInput[];
   method: PaymentMethodId;
+  /** Cupón opcional; el descuento lo calcula y aplica el servidor. */
+  couponCode?: string;
   customer: {
     name: string;
     email: string;

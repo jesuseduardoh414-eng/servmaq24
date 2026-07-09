@@ -8,6 +8,7 @@ import { JwtGuard, type AuthedRequest } from '../auth/jwt.guard';
 const checkoutSchema = z.object({
   items: z.array(z.object({ productId: z.number().int().positive(), qty: z.number().int().min(1).max(999) })).min(1),
   method: z.enum(['transferencia', 'mercadopago']),
+  couponCode: z.string().max(50).optional(),
   customer: z.object({
     name: z.string().min(2).max(190),
     email: z.string().email().max(190),
@@ -44,6 +45,15 @@ export class OrdersController {
     const methods = await this.payments.methods();
     const transferencia = methods.find((m) => m.id === 'transferencia');
     return { order, redirectUrl: null, instructions: transferencia?.instructions ?? null };
+  }
+
+  /** Previsualiza un cupón contra un subtotal (el checkout lo usa en vivo). */
+  @Post('coupon/check')
+  checkCoupon(@Body() body: { code?: string; subtotal?: number }) {
+    const code = String(body?.code ?? '').trim();
+    const subtotal = Number(body?.subtotal ?? 0);
+    if (!code || !(subtotal > 0)) throw new BadRequestException('Cupón o subtotal inválido');
+    return this.orders.checkCoupon(code, subtotal);
   }
 
   @Get()

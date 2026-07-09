@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, Input } from '@servmaq/ui';
-import type { AuthUser, CheckoutResult, PaymentMethod, PaymentMethodId } from '@servmaq/types';
+import type { AuthUser, CheckoutResult, CouponCheck, PaymentMethod, PaymentMethodId } from '@servmaq/types';
 import { useCart } from '@/components/CartProvider';
 import { formatPrice } from '@/lib/format';
 
@@ -29,6 +29,11 @@ export function CheckoutForm({
     emptyCart: string;
     browse: string;
     total: string;
+    couponLabel: string;
+    couponApply: string;
+    couponApplied: string;
+    couponInvalid: string;
+    discount: string;
   };
 }) {
   const cart = useCart();
@@ -37,6 +42,27 @@ export function CheckoutForm({
   const [method, setMethod] = useState<PaymentMethodId>(available[0]?.id ?? 'transferencia');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState<CouponCheck | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
+  async function applyCoupon() {
+    setCouponError(null);
+    setCoupon(null);
+    const code = couponInput.trim();
+    if (!code) return;
+    const res = await fetch('/api/proxy/orders/coupon/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, subtotal: cart.total }),
+    });
+    const data = (await res.json().catch(() => null)) as CouponCheck | null;
+    if (res.ok && data?.valid) setCoupon(data);
+    else setCouponError(labels.couponInvalid);
+  }
+
+  const discount = coupon?.valid ? coupon.discount : 0;
+  const finalTotal = Math.max(0, cart.total - discount);
 
   if (cart.items.length === 0) {
     return <p style={{ color: 'var(--color-text-muted)' }}>{labels.emptyCart}</p>;
@@ -53,6 +79,7 @@ export function CheckoutForm({
       body: JSON.stringify({
         items: cart.items.map((i) => ({ productId: i.productId, qty: i.qty })),
         method,
+        ...(coupon?.valid ? { couponCode: coupon.code } : {}),
         customer: {
           name: String(form.get('name') ?? ''),
           email: String(form.get('email') ?? ''),
@@ -132,10 +159,32 @@ export function CheckoutForm({
           </div>
         ))}
         <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '.2rem 0' }} />
+
+        {/* Cupón: previsualiza el descuento; el server lo recalcula al confirmar */}
+        <div style={{ display: 'flex', gap: '.5rem' }}>
+          <Input
+            value={couponInput}
+            onChange={(e) => setCouponInput(e.target.value)}
+            placeholder={labels.couponLabel}
+            aria-label={labels.couponLabel}
+            style={{ flex: 1 }}
+          />
+          <Button type="button" variant="outline" onClick={applyCoupon}>{labels.couponApply}</Button>
+        </div>
+        {couponError ? (
+          <p role="alert" style={{ color: 'var(--color-error)', margin: 0, fontSize: 'var(--text-sm)' }}>{couponError}</p>
+        ) : null}
+        {coupon?.valid ? (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)', color: 'var(--color-success)' }}>
+            <span>{labels.couponApplied} ({coupon.code}{coupon.label ? ` · ${coupon.label}` : ''})</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>−{formatPrice(coupon.discount)}</span>
+          </div>
+        ) : null}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-lg)' }}>
           <strong>{labels.total}</strong>
           <strong style={{ color: 'var(--color-primary)', fontVariantNumeric: 'tabular-nums' }}>
-            {formatPrice(cart.total)}
+            {formatPrice(finalTotal)}
           </strong>
         </div>
         {error ? (

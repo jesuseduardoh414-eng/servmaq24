@@ -10,6 +10,11 @@ import { getProduct, getSiteSettings } from '@/lib/api';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 import { Price } from '@/components/ProductCard';
 import { AddToCart } from '@/components/AddToCart';
+import { ProductComments } from '@/components/ProductComments';
+import { WishlistButton } from '@/components/WishlistButton';
+import type { ProductCommentsSummary } from '@servmaq/types';
+
+const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 type Params = { slug: string };
 
@@ -52,7 +57,12 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
   const [theme, product] = await Promise.all([getTheme(), fetchBySlug(slug)]);
   if (!product) notFound();
 
-  const settings = await getSiteSettings();
+  const [settings, comments] = await Promise.all([
+    getSiteSettings(),
+    fetch(`${API_URL}/catalog/products/${product.id}/comments`, { next: { revalidate: 60 } })
+      .then((r) => r.json())
+      .catch(() => ({ items: [], average: 0, count: 0 })) as Promise<ProductCommentsSummary>,
+  ]);
   const quoteMode = theme.tokens.quoteMode;
   const description = stripHtml(product.description);
 
@@ -64,6 +74,15 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
     description: description.slice(0, 500),
     image: [product.image, ...product.gallery].filter(Boolean),
     ...(product.brand ? { brand: { '@type': 'Brand', name: product.brand } } : {}),
+    ...(comments.count > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: comments.average,
+            reviewCount: comments.count,
+          },
+        }
+      : {}),
     ...(!quoteMode && product.price !== null
       ? {
           offers: {
@@ -179,6 +198,10 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
                   <Button size="lg" variant="ghost">{t(theme, 'product.cta.inquiry')}</Button>
                 </a>
               ) : null}
+              <WishlistButton
+                productId={product.id}
+                labels={{ add: t(theme, 'wishlist.add'), remove: t(theme, 'wishlist.remove') }}
+              />
             </div>
 
             <div
@@ -219,6 +242,22 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
             ) : null}
           </div>
         </article>
+
+        <div style={{ marginTop: '2.5rem' }}>
+          <ProductComments
+            productId={product.id}
+            initial={comments}
+            labels={{
+              title: t(theme, 'comments.title'),
+              empty: t(theme, 'comments.empty'),
+              formTitle: t(theme, 'comments.form.title'),
+              rating: t(theme, 'comments.form.rating'),
+              text: t(theme, 'comments.form.text'),
+              submit: t(theme, 'comments.form.submit'),
+              loginToComment: t(theme, 'comments.loginToComment'),
+            }}
+          />
+        </div>
       </main>
       <SiteFooter theme={theme} />
     </>

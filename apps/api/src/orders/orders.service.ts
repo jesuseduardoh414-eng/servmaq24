@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { prisma } from '@servmaq/db';
-import type { CheckoutInput, OrderDetail, OrderItem, OrderSummary } from '@servmaq/types';
+import type { CheckoutInput, CouponCheck, OrderDetail, OrderItem, OrderSummary } from '@servmaq/types';
 import { imageUrl } from '../catalog/images';
 
 /** Réplica del formato legacy: 4 chars alfanuméricos + unix timestamp. */
@@ -51,6 +51,37 @@ export class OrdersService {
     }
   }
 
+  /**
+   * Valida un cupón contra el subtotal (type 0 = %, type 1 = monto fijo).
+   * Nota: el legacy comparaba solo el día del mes (bug) — aquí fechas completas.
+   */
+  async checkCoupon(code: string, subtotal: number): Promise<CouponCheck> {
+    const base: CouponCheck = { valid: false, reason: 'not_found', code, discount: 0, label: null };
+    const c = await prisma.coupons.findFirst({ where: { code, status: 1 } });
+    if (!c) return base;
+
+    const now = new Date();
+    const end = new Date(c.end_date);
+    end.setHours(23, 59, 59, 999); // end_date inclusivo
+    if (now < new Date(c.start_date) || now > end) return { ...base, reason: 'expired' };
+
+    const times = c.times ? parseInt(c.times, 10) : null;
+    if (times !== null && !Number.isNaN(times) && c.used >= times) {
+      return { ...base, reason: 'exhausted' };
+    }
+
+    const discount = c.type === 0
+      ? Math.round(subtotal * c.price) / 100
+      : Math.min(c.price, subtotal);
+    return {
+      valid: true,
+      reason: null,
+      code,
+      discount: Math.round(discount * 100) / 100,
+      label: c.type === 0 ? `${c.price}%` : null,
+    };
+  }
+
   async create(userId: number, input: CheckoutInput): Promise<{ order: OrderSummary; total: number }> {
     if (input.items.length === 0) throw new BadRequestException('El carrito está vacío');
 
@@ -69,9 +100,24 @@ export class OrdersService {
       return { productId: p.id, name: p.name, price: p.cprice, qty, image: imageUrl(p.photo) };
     });
 
-    const total = Math.round(items.reduce((s, i) => s + i.price * i.qty, 0) * 100) / 100;
+    const subtotal = Math.round(items.reduce((s, i) => s + i.price * i.qty, 0) * 100) / 100;
     const totalQty = items.reduce((s, i) => s + i.qty, 0);
     const cart: CartV2 = { v: 2, items };
+
+    // Cupón: validar y aplicar server-side; incrementa `used` solo al usarse
+    let couponDiscount = 0;
+    let couponCode: string | null = null;
+    if (input.couponCode) {
+      const check = await this.checkCoupon(input.couponCode, subtotal);
+      if (!check.valid) throw new BadRequestException('El cupón no es válido o expiró');
+      couponDiscount = check.discount;
+      couponCode = check.code;
+      await prisma.coupons.updateMany({
+        where: { code: check.code },
+        data: { used: { increment: 1 } },
+      });
+    }
+    const total = Math.max(0, Math.round((subtotal - couponDiscount) * 100) / 100);
 
     const o = await prisma.orders.create({
       data: {
@@ -80,6 +126,8 @@ export class OrdersService {
         method: METHOD_LABEL[input.method] ?? input.method,
         totalQty: String(totalQty),
         pay_amount: total,
+        coupon_code: couponCode,
+        coupon_discount: couponDiscount > 0 ? String(couponDiscount) : null,
         order_number: newOrderNumber(),
         payment_status: 'Pending',
         status: 'pending',

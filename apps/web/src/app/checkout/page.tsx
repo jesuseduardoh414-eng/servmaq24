@@ -46,6 +46,11 @@ export default async function CheckoutPage() {
             emptyCart: t(theme, 'cart.empty'),
             browse: t(theme, 'cart.browse'),
             total: t(theme, 'cart.total'),
+            couponLabel: t(theme, 'checkout.coupon.label'),
+            couponApply: t(theme, 'checkout.coupon.apply'),
+            couponApplied: t(theme, 'checkout.coupon.applied'),
+            couponInvalid: t(theme, 'checkout.coupon.invalid'),
+            discount: t(theme, 'checkout.discount'),
           }}
         />
       </main>
