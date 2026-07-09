@@ -47,6 +47,7 @@ export class ProductsService {
     search?: string;
     category?: string; // cat_slug
     featured?: boolean;
+    vendorId?: number; // tienda de un vendedor (products.user_id)
   }): Promise<Paginated<ProductCard>> {
     const page = Math.max(1, opts.page ?? 1);
 
@@ -54,6 +55,7 @@ export class ProductsService {
     const where: Record<string, unknown> = { status: 1 };
     if (opts.search) where.name = { contains: opts.search };
     if (opts.featured) where.featured = 1;
+    if (opts.vendorId) where.user_id = opts.vendorId;
     if (opts.category) {
       const cat = await prisma.categories.findUnique({ where: { cat_slug: opts.category } });
       where.category_id = cat ? cat.id : -1; // categoría inexistente → 0 resultados

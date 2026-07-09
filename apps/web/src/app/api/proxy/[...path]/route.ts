@@ -14,6 +14,7 @@ const ALLOWLIST = [
   /^auth\/profile$/,
   /^auth\/change-password$/,
   /^catalog\/products\/\d+\/comments$/,
+  /^vendor(\/|$)/,
 ];
 
 async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
@@ -24,14 +25,15 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
   }
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
-  const init: RequestInit = {
-    method: req.method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  };
-  if (req.method !== 'GET') init.body = await req.text();
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+  const init: RequestInit = { method: req.method, headers };
+
+  if (req.method !== 'GET' && req.method !== 'DELETE') {
+    // multipart (subida de fotos) pasa como blob conservando el boundary
+    const contentType = req.headers.get('content-type') ?? 'application/json';
+    headers['Content-Type'] = contentType;
+    init.body = await req.blob();
+  }
 
   const apiRes = await fetch(`${API_URL}/${joined}`, init);
   const data = await apiRes.json().catch(() => null);
@@ -41,3 +43,4 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
 export const GET = forward;
 export const POST = forward;
 export const PATCH = forward;
+export const DELETE = forward;

@@ -89,7 +89,7 @@ export class OrdersService {
     const ids = input.items.map((i) => i.productId);
     const products = await prisma.products.findMany({
       where: { id: { in: ids }, status: 1 },
-      select: { id: true, name: true, cprice: true, photo: true, stock: true },
+      select: { id: true, name: true, cprice: true, photo: true, stock: true, user_id: true },
     });
     const byId = new Map(products.map((p) => [p.id, p]));
 
@@ -144,6 +144,23 @@ export class OrdersService {
         updated_at: new Date(),
       },
     });
+
+    // Marketplace: los items de productos de vendedor generan su vendor_order
+    const vendorItems = input.items
+      .map((i) => ({ input: i, product: byId.get(i.productId) }))
+      .filter((x) => x.product && x.product.user_id > 0);
+    if (vendorItems.length > 0) {
+      await prisma.vendor_orders.createMany({
+        data: vendorItems.map(({ input: i, product: p }) => ({
+          user_id: p!.user_id,
+          order_id: o.id,
+          qty: Math.max(1, Math.floor(i.qty)),
+          price: Math.round(p!.cprice * Math.max(1, Math.floor(i.qty))),
+          order_number: o.order_number,
+          status: 'pending',
+        })),
+      });
+    }
 
     return { order: this.toSummary(o), total };
   }
