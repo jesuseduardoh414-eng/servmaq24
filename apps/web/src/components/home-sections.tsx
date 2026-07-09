@@ -7,6 +7,7 @@ import {
   getBanners,
   getBlogs,
   getCategories,
+  getFaqs,
   getHero,
   getProducts,
   getReviews,
@@ -321,6 +322,35 @@ export async function BlogSection({ theme }: { theme: Theme }) {
               </span>
             </span>
           </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export async function FaqSection({ theme }: { theme: Theme }) {
+  const faqs = await getFaqs();
+  if (faqs.length === 0) return null;
+  return (
+    <section style={sectionWrap}>
+      <h2 style={sectionTitle}>{t(theme, 'home.faq.title')}</h2>
+      <div style={{ display: 'grid', gap: '.6rem', maxWidth: 780 }}>
+        {faqs.map((f) => (
+          <details
+            key={f.id}
+            style={{
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--color-surface)',
+              padding: '.8rem 1.1rem',
+            }}
+          >
+            <summary style={{ cursor: 'pointer', fontWeight: 600 }}>{f.question}</summary>
+            <div
+              style={{ marginTop: '.6rem', color: 'var(--color-text-muted)', lineHeight: 1.7 }}
+              dangerouslySetInnerHTML={{ __html: f.answer }}
+            />
+          </details>
         ))}
       </div>
     </section>

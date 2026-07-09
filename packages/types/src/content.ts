@@ -68,6 +68,12 @@ export interface BlogDetail extends BlogCard {
   metaDescription: string | null;
 }
 
+export interface FaqItem {
+  id: number;
+  question: string;
+  answer: string;
+}
+
 export interface SiteReview {
   id: number;
   rating: number; // 1..5

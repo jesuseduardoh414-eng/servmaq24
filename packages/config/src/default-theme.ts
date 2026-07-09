@@ -96,6 +96,7 @@ export const defaultTheme: Theme = {
       'home.blog.title': 'Últimas noticias',
       'home.blog.readMore': 'Leer más',
       'home.reviews.title': 'Lo que dicen nuestros clientes',
+      'home.faq.title': 'Preguntas frecuentes',
       'catalog.title': 'Catálogo de productos',
       'catalog.search.placeholder': 'Buscar productos…',
       'catalog.search.button': 'Buscar',

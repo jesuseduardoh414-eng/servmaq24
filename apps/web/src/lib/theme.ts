@@ -4,13 +4,12 @@ const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 /**
  * Tema activo desde la API (que lo lee de la BD).
- * `no-store` en F0 para demostrar el DoD (cambio en BD → UI al refrescar);
- * en F1 pasará a ISR con revalidación e invalidación al publicar desde el admin.
+ * ISR: revalida cada 60s; el admin invalidará al publicar (F4) vía /api/revalidate.
  * Fallback al tema default si la API no responde: el sitio nunca se cae por el tema.
  */
 export async function getTheme(): Promise<Theme> {
   try {
-    const res = await fetch(`${API_URL}/theme`, { cache: 'no-store' });
+    const res = await fetch(`${API_URL}/theme`, { next: { revalidate: 60 } });
     if (!res.ok) throw new Error(`API /theme respondió ${res.status}`);
     return themeSchema.parse(await res.json());
   } catch (err) {

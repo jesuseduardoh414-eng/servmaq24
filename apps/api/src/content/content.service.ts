@@ -5,6 +5,7 @@ import type {
   BannerSet,
   BlogCard,
   BlogDetail,
+  FaqItem,
   HomeHero,
   ServiceItem,
   SiteReview,
@@ -142,6 +143,11 @@ export class ContentService {
       metaTitle: b.meta_tag,
       metaDescription: b.meta_description,
     };
+  }
+
+  async faqs(): Promise<FaqItem[]> {
+    const rows = await prisma.faqs.findMany({ orderBy: { id: 'asc' } });
+    return rows.map((f) => ({ id: f.id, question: f.title, answer: f.text }));
   }
 
   async reviews(limit = 6): Promise<SiteReview[]> {

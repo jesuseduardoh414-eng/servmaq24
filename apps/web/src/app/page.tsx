@@ -6,6 +6,7 @@ import {
   BannersSection,
   BlogSection,
   CategoriesSection,
+  FaqSection,
   FeaturedSection,
   Hero,
   ReviewsSection,
@@ -29,6 +30,7 @@ const SECTIONS: Record<string, (props: { theme: Theme }) => Promise<ReactNode> |
   'home.banners': BannersSection,
   'home.blog': BlogSection,
   'home.reviews': ReviewsSection,
+  'home.faq': FaqSection,
 };
 
 export default async function Home() {

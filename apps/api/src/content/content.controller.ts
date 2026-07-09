@@ -45,6 +45,11 @@ export class ContentController {
     return this.content.blogById(id);
   }
 
+  @Get('faqs')
+  faqs() {
+    return this.content.faqs();
+  }
+
   @Get('reviews')
   reviews(@Query('limit') limit?: string) {
     return this.content.reviews(limit ? Number(limit) : undefined);

@@ -3,6 +3,7 @@ import type {
   BlogCard,
   BlogDetail,
   Category,
+  FaqItem,
   HomeHero,
   Paginated,
   ProductCard,
@@ -18,11 +19,11 @@ import type {
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 /**
- * F1: `no-store` mientras no exista invalidación desde el admin.
- * Al cerrar F1 se pasa a ISR (`next: { revalidate }`) + invalidación al publicar.
+ * ISR: cache con revalidación cada 60s + invalidación bajo demanda vía
+ * /api/revalidate (el admin la disparará al publicar, F4).
  */
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { cache: 'no-store' });
+  const res = await fetch(`${API_URL}${path}`, { next: { revalidate: 60 } });
   if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
   return res.json() as Promise<T>;
 }
@@ -90,4 +91,8 @@ export function getBlog(id: number): Promise<BlogDetail> {
 
 export function getReviews(limit = 6): Promise<SiteReview[]> {
   return get(`/content/reviews?limit=${limit}`);
+}
+
+export function getFaqs(): Promise<FaqItem[]> {
+  return get('/content/faqs');
 }
