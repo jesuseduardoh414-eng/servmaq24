@@ -1,17 +1,9 @@
 @import "tailwindcss";
 
-/* Tailwind escanea también los packages compartidos del monorepo */
 @source "../../../../packages/ui/src";
 
-/*
- * PUENTE TOKENS → TAILWIND (regla de oro intacta):
- * las utilidades referencian las variables runtime que inyecta el SSR
- * desde la BD (var(--color-*)). Cambiar un token en la BD sigue cambiando
- * la UI sin recompilar — bg-brand === var(--color-primary).
- * Nombres semánticos propios para no colisionar con las vars runtime.
- */
+/* Puente tokens (BD, runtime) → utilidades Tailwind. Igual que en web. */
 @theme inline {
-  /* colores */
   --color-brand: var(--color-primary);
   --color-brand-fg: var(--color-primary-fg);
   --color-second: var(--color-secondary);
@@ -24,16 +16,11 @@
   --color-ok: var(--color-success);
   --color-warn: var(--color-warning);
   --color-bad: var(--color-error);
-
-  /* tipografía */
   --font-body: var(--font-sans);
   --font-head: var(--font-heading);
-
-  /* forma */
   --radius-btn: var(--radius-button);
 }
 
-/* Base del sitio: SOLO variables de tokens (valores desde la BD vía SSR). */
 body {
   margin: 0;
   background: var(--color-bg);
@@ -41,10 +28,9 @@ body {
   font-family: var(--font-sans);
   font-size: var(--text-base);
   line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4 {
+h1, h2, h3 {
   font-family: var(--font-heading);
   line-height: 1.15;
   margin: 0;

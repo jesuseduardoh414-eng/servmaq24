@@ -1,16 +1,10 @@
 import type { HTMLAttributes } from 'react';
 
-export function Card({ style, ...rest }: HTMLAttributes<HTMLDivElement>) {
+export function Card({ className = '', style, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      style={{
-        background: 'var(--color-surface)',
-        color: 'var(--color-text)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '1.25rem',
-        ...style,
-      }}
+      className={`bg-panel text-ink border border-line rounded-(--radius-lg) p-5 ${className}`}
+      style={style}
       {...rest}
     />
   );
