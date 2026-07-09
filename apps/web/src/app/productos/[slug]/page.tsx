@@ -9,6 +9,7 @@ import { getTheme, t } from '@/lib/theme';
 import { getProduct, getSiteSettings } from '@/lib/api';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 import { Price } from '@/components/ProductCard';
+import { AddToCart } from '@/components/AddToCart';
 
 type Params = { slug: string };
 
@@ -152,17 +153,30 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
               ) : null}
             </div>
 
-            {/* CTA: en F1 el contacto es por correo (funcional hoy).
-                Carrito/compra llegan en F2; flujo RFQ completo en F3. */}
-            {inquiryHref ? (
-              <div>
+            {/* CTAs: carrito (F2, oculto en quoteMode) + contacto por correo.
+                Checkout llega en el siguiente slice; flujo RFQ completo en F3. */}
+            <div style={{ display: 'flex', gap: '.7rem', flexWrap: 'wrap' }}>
+              {!quoteMode && product.price !== null && product.inStock ? (
+                <AddToCart
+                  item={{
+                    productId: product.id,
+                    slug: product.slug,
+                    name: product.name,
+                    price: product.price,
+                    image: product.image,
+                  }}
+                  label={t(theme, 'product.cta.addToCart')}
+                  addedLabel={t(theme, 'cart.added')}
+                />
+              ) : null}
+              {inquiryHref ? (
                 <a href={inquiryHref} style={{ textDecoration: 'none' }}>
                   <Button size="lg">
                     {quoteMode ? t(theme, 'product.cta.quote') : t(theme, 'product.cta.inquiry')}
                   </Button>
                 </a>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
 
             <div
               style={{ color: 'var(--color-text)', lineHeight: 1.7 }}

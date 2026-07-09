@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { themeToCss } from '@servmaq/config';
 import { getTheme, t } from '@/lib/theme';
+import { CartProvider } from '@/components/CartProvider';
 import './globals.css';
 
 export async function generateMetadata() {
@@ -21,7 +22,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           dangerouslySetInnerHTML={{ __html: themeToCss(theme.tokens) }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <CartProvider>{children}</CartProvider>
+      </body>
     </html>
   );
 }

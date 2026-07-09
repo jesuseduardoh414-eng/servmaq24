@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Theme } from '@servmaq/config';
 import { t } from '@/lib/theme';
+import { HeaderActions } from '@/components/HeaderActions';
 
 export function SiteHeader({ theme }: { theme: Theme }) {
   return (
@@ -27,13 +28,21 @@ export function SiteHeader({ theme }: { theme: Theme }) {
             {t(theme, 'site.name')}
           </strong>
         </Link>
-        <nav style={{ display: 'flex', gap: '1.4rem' }}>
+        <nav style={{ display: 'flex', gap: '1.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <Link href="/" style={{ color: 'var(--color-text-muted)', textDecoration: 'none' }}>
             {t(theme, 'nav.home')}
           </Link>
           <Link href="/productos" style={{ color: 'var(--color-text-muted)', textDecoration: 'none' }}>
             {t(theme, 'nav.products')}
           </Link>
+          <HeaderActions
+            labels={{
+              cart: t(theme, 'nav.cart'),
+              login: t(theme, 'nav.login'),
+              logout: t(theme, 'auth.logout'),
+              greeting: t(theme, 'auth.greeting'),
+            }}
+          />
         </nav>
       </div>
     </header>
