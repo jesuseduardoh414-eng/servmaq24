@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { adminFetch, getAdmin } from '@/lib/admin';
 import { AdminShell } from '@/components/AdminShell';
@@ -31,6 +32,20 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
     <AdminShell adminName={admin.name}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.2rem' }}>
         <h1 style={{ fontSize: 'var(--text-2xl)' }}>Productos ({data?.total ?? 0})</h1>
+        <Link
+          href="/productos/nuevo"
+          style={{
+            textDecoration: 'none',
+            color: 'var(--color-primary-fg)',
+            background: 'var(--color-primary)',
+            fontWeight: 600,
+            fontSize: 'var(--text-sm)',
+            padding: '.5em 1em',
+            borderRadius: 'var(--radius-button)',
+          }}
+        >
+          + Nuevo producto
+        </Link>
         <form action="/productos" method="get">
           <input
             type="search"
@@ -68,7 +83,10 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
             <Td muted>{p.stock ?? '—'}</Td>
             <Td>{p.status === 1 ? 'Activo' : 'Inactivo'}</Td>
             <Td>
-              <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <Link href={`/productos/editar/${p.id}`} style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: 'var(--text-sm)', textDecoration: 'none' }}>
+                  Editar
+                </Link>
                 <ActionButton
                   path={`catalog/products/${p.id}`}
                   body={{ status: p.status === 1 ? 0 : 1 }}

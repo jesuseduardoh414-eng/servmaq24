@@ -10,6 +10,9 @@ const NAV = [
   { href: '/cotizaciones', label: 'Cotizaciones' },
   { href: '/vendedores', label: 'Vendedores' },
   { href: '/retiros', label: 'Retiros' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/faqs', label: 'FAQ' },
+  { href: '/ajustes', label: 'Ajustes' },
   { href: '/temas', label: 'Temas / Diseño' },
 ];
 

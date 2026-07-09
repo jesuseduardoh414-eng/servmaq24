@@ -90,6 +90,29 @@ export class AdminCatalogController {
     };
   }
 
+  @Get('products/:id')
+  async productById(@Param('id', ParseIntPipe) id: number) {
+    const p = await prisma.products.findUnique({ where: { id } });
+    if (!p) throw new NotFoundException();
+    return {
+      id: p.id,
+      name: p.name,
+      categoryId: p.category_id,
+      price: p.cprice,
+      oldPrice: p.pprice,
+      description: p.description,
+      stock: p.stock,
+      brand: p.Marca,
+      isRental: p.is_rental,
+      rentalFreight: p.rental_freight ? Number(p.rental_freight) : null,
+      featured: p.featured === 1,
+      status: p.status,
+      lote: p.lote,
+      caducidad: p.caducidad ? p.caducidad.toISOString().slice(0, 10) : null,
+      image: imageUrl(p.photo),
+    };
+  }
+
   @Post('products')
   @UseInterceptors(FileInterceptor('photo', { storage: photoStorage, limits: { fileSize: 8 * 1024 * 1024 } }))
   async createProduct(@Body() body: unknown, @UploadedFile() photo?: Express.Multer.File) {

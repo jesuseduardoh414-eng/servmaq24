@@ -1,0 +1,17 @@
+import { redirect } from 'next/navigation';
+import { adminFetch, getAdmin } from '@/lib/admin';
+import { AdminShell } from '@/components/AdminShell';
+import { ProductForm } from '@/components/ProductForm';
+
+export default async function NewProductPage() {
+  const admin = await getAdmin();
+  if (!admin) redirect('/login');
+  const categories = (await adminFetch<Array<{ id: number; name: string }>>('/admin/catalog/categories')) ?? [];
+
+  return (
+    <AdminShell adminName={admin.name}>
+      <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: '1.2rem' }}>Nuevo producto</h1>
+      <ProductForm initial={{}} categories={categories} />
+    </AdminShell>
+  );
+}
