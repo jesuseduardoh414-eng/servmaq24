@@ -13,10 +13,12 @@ const NAV = [
   { href: '/blog', label: 'Blog' },
   { href: '/faqs', label: 'FAQ' },
   { href: '/contenido', label: 'Contenido' },
+  { href: '/sectores', label: 'Sectores' },
   { href: '/banners', label: 'Banners' },
   { href: '/usuarios', label: 'Clientes' },
   { href: '/resenas', label: 'Reseñas' },
   { href: '/suscriptores', label: 'Suscriptores' },
+  { href: '/admins', label: 'Administradores' },
   { href: '/ajustes', label: 'Ajustes' },
   { href: '/temas', label: 'Temas / Diseño' },
 ];

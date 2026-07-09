@@ -330,6 +330,92 @@ export class AdminCmsController {
     return { ok: true };
   }
 
+  // ---- Sectores estratégicos ----
+
+  @Get('sectors')
+  async sectors() {
+    const rows = await prisma.strategic_sectors.findMany({ orderBy: { id: 'asc' } });
+    return rows.map((s) => ({
+      id: Number(s.id),
+      title: s.title,
+      status: s.status,
+      image: imageUrl(s.image),
+    }));
+  }
+
+  @Get('sectors/:id')
+  async sectorById(@Param('id', ParseIntPipe) id: number) {
+    const s = await prisma.strategic_sectors.findUnique({ where: { id } });
+    if (!s) throw new NotFoundException();
+    return {
+      id: Number(s.id),
+      title: s.title,
+      description: s.description,
+      trayectoria: s.trayectoria,
+      esencia: s.esencia,
+      servicios: s.servicios,
+      excelencia: s.excelencia,
+      serviciosLista: s.servicios_lista,
+      status: s.status,
+      image: imageUrl(s.image),
+    };
+  }
+
+  @Post('sectors')
+  async createSector(@Body() body: { title?: string }) {
+    const title = String(body?.title ?? '').trim();
+    if (title.length < 2) throw new BadRequestException('Título requerido');
+    const s = await prisma.strategic_sectors.create({
+      data: { title, status: 1, created_at: new Date(), updated_at: new Date() },
+    });
+    return { id: Number(s.id) };
+  }
+
+  @Patch('sectors/:id')
+  @UseInterceptors(FileInterceptor('image', { storage: photoStorage, limits: { fileSize: 6 * 1024 * 1024 } }))
+  async updateSector(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: unknown,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    const schema = z.object({
+      title: z.string().min(2).max(190).optional(),
+      description: z.string().max(20000).optional(),
+      trayectoria: z.string().max(20000).optional(),
+      esencia: z.string().max(20000).optional(),
+      servicios: z.string().max(20000).optional(),
+      excelencia: z.string().max(20000).optional(),
+      serviciosLista: z.string().max(5000).optional(), // una línea por servicio
+      status: z.coerce.number().int().min(0).max(1).optional(),
+    });
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException('Datos inválidos');
+    photoOk(image);
+    const d = parsed.data;
+    await prisma.strategic_sectors.update({
+      where: { id },
+      data: {
+        ...(d.title !== undefined ? { title: d.title } : {}),
+        ...(d.description !== undefined ? { description: d.description } : {}),
+        ...(d.trayectoria !== undefined ? { trayectoria: d.trayectoria } : {}),
+        ...(d.esencia !== undefined ? { esencia: d.esencia } : {}),
+        ...(d.servicios !== undefined ? { servicios: d.servicios } : {}),
+        ...(d.excelencia !== undefined ? { excelencia: d.excelencia } : {}),
+        ...(d.serviciosLista !== undefined ? { servicios_lista: d.serviciosLista } : {}),
+        ...(d.status !== undefined ? { status: d.status } : {}),
+        ...(image ? { image: `uploads/${image.filename}` } : {}),
+        updated_at: new Date(),
+      },
+    });
+    return { ok: true };
+  }
+
+  @Delete('sectors/:id')
+  async deleteSector(@Param('id', ParseIntPipe) id: number) {
+    await prisma.strategic_sectors.delete({ where: { id } });
+    return { ok: true };
+  }
+
   // ---- Quiénes somos (inf_sitio) ----
 
   @Get('inf-sitio')
