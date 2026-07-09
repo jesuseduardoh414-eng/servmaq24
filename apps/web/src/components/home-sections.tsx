@@ -358,6 +358,46 @@ export async function FaqSection({ theme }: { theme: Theme }) {
   );
 }
 
+export async function SuccessCasesSection({ theme }: { theme: Theme }) {
+  const API_URL = process.env.API_URL ?? 'http://localhost:4000';
+  const cases = (await fetch(`${API_URL}/content/success-cases`, { next: { revalidate: 60 } })
+    .then((r) => r.json())
+    .catch(() => [])) as Array<{ id: number; client: string; review: string; image: string | null }>;
+  if (cases.length === 0) return null;
+  return (
+    <section style={sectionWrap}>
+      <h2 style={sectionTitle}>{t(theme, 'home.successCases.title')}</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.2rem' }}>
+        {cases.map((c) => (
+          <figure
+            key={c.id}
+            style={{
+              margin: 0,
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--color-surface)',
+              overflow: 'hidden',
+              display: 'grid',
+            }}
+          >
+            {c.image ? (
+              <span style={{ position: 'relative', aspectRatio: '16 / 9', display: 'block' }}>
+                <Image src={c.image} alt={c.client} fill sizes="(max-width: 640px) 100vw, 33vw" style={{ objectFit: 'cover' }} />
+              </span>
+            ) : null}
+            <div style={{ padding: '1rem', display: 'grid', gap: '.4rem' }}>
+              <strong>{c.client}</strong>
+              <blockquote style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', lineHeight: 1.6 }}>
+                “{c.review}”
+              </blockquote>
+            </div>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Stars({ rating }: { rating: number }) {
   return (
     <span aria-label={`${rating} de 5`} style={{ color: 'var(--color-warning)', letterSpacing: '.1em' }}>

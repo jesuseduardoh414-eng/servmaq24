@@ -10,6 +10,7 @@ import { getProduct, getSiteSettings } from '@/lib/api';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 import { Price } from '@/components/ProductCard';
 import { AddToCart } from '@/components/AddToCart';
+import { RentalAddToCart } from '@/components/RentalAddToCart';
 import { ProductComments } from '@/components/ProductComments';
 import { WishlistButton } from '@/components/WishlistButton';
 import type { ProductCommentsSummary } from '@servmaq/types';
@@ -172,10 +173,26 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
               ) : null}
             </div>
 
-            {/* CTAs: carrito (oculto en quoteMode) + cotización (flujo RFQ real)
-                + contacto por correo como secundario. */}
+            {/* CTAs: carrito (renta con fechas si aplica; oculto en quoteMode)
+                + cotización (flujo RFQ) + contacto por correo. */}
+            {!quoteMode && product.isRental && product.price !== null && product.inStock ? (
+              <RentalAddToCart
+                item={{ productId: product.id, slug: product.slug, name: product.name, image: product.image }}
+                pricePerDay={product.price}
+                freight={product.rentalFreight ?? 0}
+                labels={{
+                  start: t(theme, 'rental.start'),
+                  end: t(theme, 'rental.end'),
+                  days: t(theme, 'rental.days'),
+                  freight: t(theme, 'rental.freight'),
+                  total: t(theme, 'cart.total'),
+                  add: t(theme, 'product.cta.addToCart'),
+                  added: t(theme, 'cart.added'),
+                }}
+              />
+            ) : null}
             <div style={{ display: 'flex', gap: '.7rem', flexWrap: 'wrap' }}>
-              {!quoteMode && product.price !== null && product.inStock ? (
+              {!quoteMode && !product.isRental && product.price !== null && product.inStock ? (
                 <AddToCart
                   item={{
                     productId: product.id,

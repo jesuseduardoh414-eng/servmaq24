@@ -11,9 +11,24 @@ export interface CartItem {
   productId: number;
   slug: string;
   name: string;
+  /** Unitario; en renta es el precio POR DÍA. */
   price: number;
   image: string | null;
   qty: number;
+  /** Renta (brief Hito 4): fechas + flete base por unidad. */
+  rental?: {
+    startDate: string; // YYYY-MM-DD
+    endDate: string;
+    days: number;
+    freight: number;
+  };
+}
+
+/** Total de línea: renta = (precioDía×días + flete)×qty; normal = precio×qty. */
+export function cartLineTotal(i: CartItem): number {
+  return i.rental
+    ? (i.price * i.rental.days + i.rental.freight) * i.qty
+    : i.price * i.qty;
 }
 
 interface CartApi {
@@ -51,7 +66,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const api = useMemo<CartApi>(() => ({
     items,
     count: items.reduce((n, i) => n + i.qty, 0),
-    total: items.reduce((s, i) => s + i.price * i.qty, 0),
+    total: items.reduce((s, i) => s + cartLineTotal(i), 0),
     add: (item, qty = 1) =>
       setItems((prev) => {
         const found = prev.find((i) => i.productId === item.productId);

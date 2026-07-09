@@ -13,9 +13,10 @@ interface Item {
 export default async function AdminContent() {
   const admin = await getAdmin();
   if (!admin) redirect('/login');
-  const [services, why] = await Promise.all([
+  const [services, why, cases] = await Promise.all([
     adminFetch<Item[]>('/admin/cms/services'),
     adminFetch<Item[]>('/admin/cms/why-choose-us'),
+    adminFetch<Item[]>('/admin/cms/success-cases'),
   ]);
 
   return (
@@ -24,6 +25,7 @@ export default async function AdminContent() {
       <div className="grid gap-8 max-w-3xl">
         <ItemManager apiPath="cms/services" heading="Servicios" items={services ?? []} />
         <ItemManager apiPath="cms/why-choose-us" heading="¿Por qué elegirnos?" items={why ?? []} />
+        <ItemManager apiPath="cms/success-cases" heading="Casos de éxito (cliente + reseña)" items={cases ?? []} />
       </div>
     </AdminShell>
   );

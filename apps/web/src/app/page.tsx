@@ -11,6 +11,7 @@ import {
   Hero,
   ReviewsSection,
   SectorsSection,
+  SuccessCasesSection,
   ServicesSection,
   WhyChooseUsSection,
 } from '@/components/home-sections';
@@ -30,6 +31,7 @@ const SECTIONS: Record<string, (props: { theme: Theme }) => Promise<ReactNode> |
   'home.banners': BannersSection,
   'home.blog': BlogSection,
   'home.reviews': ReviewsSection,
+  'home.success-cases': SuccessCasesSection,
   'home.faq': FaqSection,
 };
 

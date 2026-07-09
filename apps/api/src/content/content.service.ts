@@ -14,6 +14,7 @@ import type {
   WhyChooseUsItem,
 } from '@servmaq/types';
 import { imageUrl } from '../catalog/images';
+import { PerfexService } from '../integrations/integrations.module';
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -21,6 +22,8 @@ function stripHtml(html: string): string {
 
 @Injectable()
 export class ContentService {
+  constructor(private readonly perfex: PerfexService) {}
+
   async hero(): Promise<HomeHero | null> {
     const h = await prisma.hero_sections.findFirst({ orderBy: { id: 'desc' } });
     if (!h) return null;
@@ -165,11 +168,29 @@ export class ContentService {
     };
   }
 
-  /** Alta de newsletter (email único; repetido = ok idempotente). */
+  /**
+   * Alta de newsletter (email único; repetido = ok idempotente).
+   * Observer del brief: cada alta nueva se empuja a Perfex CRM como lead.
+   */
   async subscribe(email: string): Promise<{ ok: boolean }> {
     const exists = await prisma.subscribers.findUnique({ where: { email } });
-    if (!exists) await prisma.subscribers.create({ data: { email } });
+    if (!exists) {
+      await prisma.subscribers.create({ data: { email } });
+      // fire-and-forget: el alta no depende de que Perfex responda
+      void this.perfex.pushLead({ name: email, email, source: 'Newsletter' });
+    }
     return { ok: true };
+  }
+
+  /** Casos de éxito (tabla legacy portfolios: cliente + foto + reseña). */
+  async successCases() {
+    const rows = await prisma.portfolios.findMany({ orderBy: { id: 'desc' } });
+    return rows.map((p) => ({
+      id: p.id,
+      client: p.client,
+      review: p.review,
+      image: imageUrl(p.photo),
+    }));
   }
 
   async faqs(): Promise<FaqItem[]> {

@@ -50,6 +50,11 @@ export class ContentController {
     return this.content.infSitio();
   }
 
+  @Get('success-cases')
+  successCases() {
+    return this.content.successCases();
+  }
+
   @Post('subscribe')
   subscribe(@Body() body: { email?: string }) {
     const email = String(body?.email ?? '').trim().toLowerCase();

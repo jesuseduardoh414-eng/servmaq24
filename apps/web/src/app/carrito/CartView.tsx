@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button, Card } from '@servmaq/ui';
-import { useCart } from '@/components/CartProvider';
+import { cartLineTotal, useCart } from '@/components/CartProvider';
 import { formatPrice } from '@/lib/format';
 
 /** Vista cliente del carrito. Textos resueltos en el server component. */
@@ -51,7 +51,14 @@ export function CartView({
             <Link href={`/productos/${item.slug}`} style={{ color: 'var(--color-text)', fontWeight: 600, textDecoration: 'none' }}>
               {item.name}
             </Link>
-            <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{formatPrice(item.price)}</span>
+            {item.rental ? (
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+                {item.rental.startDate} → {item.rental.endDate} · {item.rental.days} día(s)
+              </span>
+            ) : null}
+            <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
+              {formatPrice(cartLineTotal({ ...item, qty: 1 }))}
+            </span>
           </div>
           <div style={{ display: 'flex', gap: '.4rem', alignItems: 'center' }}>
             <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>{labels.qty}</span>

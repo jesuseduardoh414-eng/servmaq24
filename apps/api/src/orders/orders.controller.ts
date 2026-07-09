@@ -5,8 +5,14 @@ import { OrdersService } from './orders.service';
 import { PaymentsService } from '../payments/payments.service';
 import { JwtGuard, type AuthedRequest } from '../auth/jwt.guard';
 
+const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const checkoutSchema = z.object({
-  items: z.array(z.object({ productId: z.number().int().positive(), qty: z.number().int().min(1).max(999) })).min(1),
+  items: z.array(z.object({
+    productId: z.number().int().positive(),
+    qty: z.number().int().min(1).max(999),
+    startDate: dateStr.optional(),
+    endDate: dateStr.optional(),
+  })).min(1),
   method: z.enum(['transferencia', 'mercadopago']),
   couponCode: z.string().max(50).optional(),
   customer: z.object({

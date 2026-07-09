@@ -18,6 +18,9 @@ export interface PaymentMethod {
 export interface CheckoutItemInput {
   productId: number;
   qty: number;
+  /** Renta (brief Hito 4): rango de fechas; el server calcula días y flete. */
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string;   // YYYY-MM-DD (fecha de retorno)
 }
 
 export interface CheckoutInput {
@@ -39,9 +42,15 @@ export interface CheckoutInput {
 export interface OrderItem {
   productId: number;
   name: string;
+  /** Unitario; en renta es el precio POR DÍA. */
   price: number;
   qty: number;
   image: string | null;
+  /** Solo renta: */
+  days?: number;
+  startDate?: string;
+  endDate?: string;
+  freight?: number; // flete unitario aplicado
 }
 
 export interface OrderSummary {

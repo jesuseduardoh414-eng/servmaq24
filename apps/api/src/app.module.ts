@@ -10,9 +10,10 @@ import { QuotesModule } from './quotes/quotes.module';
 import { AccountModule } from './account/account.module';
 import { VendorsModule } from './vendors/vendors.module';
 import { AdminModule } from './admin/admin.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 
 @Module({
-  imports: [AuthModule, ThemeModule, CatalogModule, SettingsModule, ContentModule, OrdersModule, QuotesModule, AccountModule, VendorsModule, AdminModule],
+  imports: [AuthModule, ThemeModule, CatalogModule, SettingsModule, ContentModule, OrdersModule, QuotesModule, AccountModule, VendorsModule, AdminModule, IntegrationsModule],
   controllers: [HealthController],
 })
 export class AppModule {}

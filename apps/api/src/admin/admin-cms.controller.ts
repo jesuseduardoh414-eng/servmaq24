@@ -330,6 +330,49 @@ export class AdminCmsController {
     return { ok: true };
   }
 
+  // ---- Casos de éxito (tabla legacy portfolios; title=cliente, text=reseña) ----
+
+  @Get('success-cases')
+  async successCases() {
+    const rows = await prisma.portfolios.findMany({ orderBy: { id: 'desc' } });
+    return rows.map((p) => ({ id: p.id, title: p.client, text: p.review, image: imageUrl(p.photo) }));
+  }
+
+  @Post('success-cases')
+  @UseInterceptors(FileInterceptor('photo', { storage: photoStorage, limits: { fileSize: 4 * 1024 * 1024 } }))
+  async createSuccessCase(@Body() body: unknown, @UploadedFile() photo?: Express.Multer.File) {
+    const parsed = itemSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException('Datos inválidos');
+    photoOk(photo);
+    const p = await prisma.portfolios.create({
+      data: { client: parsed.data.title, review: parsed.data.text, photo: photo ? `uploads/${photo.filename}` : null },
+    });
+    return { id: p.id };
+  }
+
+  @Patch('success-cases/:id')
+  @UseInterceptors(FileInterceptor('photo', { storage: photoStorage, limits: { fileSize: 4 * 1024 * 1024 } }))
+  async updateSuccessCase(@Param('id', ParseIntPipe) id: number, @Body() body: unknown, @UploadedFile() photo?: Express.Multer.File) {
+    const parsed = itemSchema.partial().safeParse(body);
+    if (!parsed.success) throw new BadRequestException('Datos inválidos');
+    photoOk(photo);
+    await prisma.portfolios.update({
+      where: { id },
+      data: {
+        ...(parsed.data.title !== undefined ? { client: parsed.data.title } : {}),
+        ...(parsed.data.text !== undefined ? { review: parsed.data.text } : {}),
+        ...(photo ? { photo: `uploads/${photo.filename}` } : {}),
+      },
+    });
+    return { ok: true };
+  }
+
+  @Delete('success-cases/:id')
+  async deleteSuccessCase(@Param('id', ParseIntPipe) id: number) {
+    await prisma.portfolios.delete({ where: { id } });
+    return { ok: true };
+  }
+
   // ---- Sectores estratégicos ----
 
   @Get('sectors')

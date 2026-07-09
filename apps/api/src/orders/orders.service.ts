@@ -89,7 +89,10 @@ export class OrdersService {
     const ids = input.items.map((i) => i.productId);
     const products = await prisma.products.findMany({
       where: { id: { in: ids }, status: 1 },
-      select: { id: true, name: true, cprice: true, photo: true, stock: true, user_id: true },
+      select: {
+        id: true, name: true, cprice: true, photo: true, stock: true, user_id: true,
+        is_rental: true, rental_freight: true,
+      },
     });
     const byId = new Map(products.map((p) => [p.id, p]));
 
@@ -97,10 +100,30 @@ export class OrdersService {
       const p = byId.get(i.productId);
       if (!p) throw new BadRequestException(`Producto ${i.productId} no disponible`);
       const qty = Math.max(1, Math.min(999, Math.floor(i.qty)));
-      return { productId: p.id, name: p.name, price: p.cprice, qty, image: imageUrl(p.photo) };
+      const base: OrderItem = { productId: p.id, name: p.name, price: p.cprice, qty, image: imageUrl(p.photo) };
+
+      // Renta (brief Hito 4): fechas obligatorias, fórmula (PrecioDiario×Días)+Flete
+      if (p.is_rental) {
+        if (!i.startDate || !i.endDate) {
+          throw new BadRequestException(`"${p.name}" es de renta: elige fechas de inicio y retorno`);
+        }
+        const start = new Date(`${i.startDate}T00:00:00`);
+        const end = new Date(`${i.endDate}T00:00:00`);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+          throw new BadRequestException(`Fechas de renta inválidas para "${p.name}"`);
+        }
+        const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000));
+        if (days > 365) throw new BadRequestException('La renta no puede exceder 365 días');
+        // Flete: tarifa base por producto (con Distance Matrix se multiplica por km)
+        const freight = p.rental_freight ? Math.round(Number(p.rental_freight) * 100) / 100 : 0;
+        return { ...base, days, startDate: i.startDate, endDate: i.endDate, freight };
+      }
+      return base;
     });
 
-    const subtotal = Math.round(items.reduce((s, i) => s + i.price * i.qty, 0) * 100) / 100;
+    const lineTotal = (i: OrderItem) =>
+      i.days ? (i.price * i.days + (i.freight ?? 0)) * i.qty : i.price * i.qty;
+    const subtotal = Math.round(items.reduce((s, i) => s + lineTotal(i), 0) * 100) / 100;
     const totalQty = items.reduce((s, i) => s + i.qty, 0);
     const cart: CartV2 = { v: 2, items };
 
@@ -144,6 +167,25 @@ export class OrdersService {
         updated_at: new Date(),
       },
     });
+
+    // Renta (brief): registrar rental_periods ligadas a la orden
+    const rentalItems = items.filter((i) => i.days && i.startDate && i.endDate);
+    if (rentalItems.length > 0) {
+      await prisma.rental_periods.createMany({
+        data: rentalItems.map((i) => ({
+          order_id: o.id,
+          product_id: i.productId,
+          start_date: new Date(`${i.startDate}T00:00:00`),
+          end_date: new Date(`${i.endDate}T00:00:00`),
+          days: i.days!,
+          price_per_day: i.price,
+          total_price: Math.round((i.price * i.days! + (i.freight ?? 0)) * i.qty * 100) / 100,
+          freight: i.freight ?? 0,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })),
+      });
+    }
 
     // Marketplace: los items de productos de vendedor generan su vendor_order
     const vendorItems = input.items

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, Input } from '@servmaq/ui';
 import type { AuthUser, CheckoutResult, CouponCheck, PaymentMethod, PaymentMethodId } from '@servmaq/types';
-import { useCart } from '@/components/CartProvider';
+import { cartLineTotal, useCart } from '@/components/CartProvider';
 import { formatPrice } from '@/lib/format';
 
 export function CheckoutForm({
@@ -77,7 +77,11 @@ export function CheckoutForm({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        items: cart.items.map((i) => ({ productId: i.productId, qty: i.qty })),
+        items: cart.items.map((i) => ({
+          productId: i.productId,
+          qty: i.qty,
+          ...(i.rental ? { startDate: i.rental.startDate, endDate: i.rental.endDate } : {}),
+        })),
         method,
         ...(coupon?.valid ? { couponCode: coupon.code } : {}),
         customer: {
@@ -154,8 +158,11 @@ export function CheckoutForm({
         <h2 style={{ fontSize: 'var(--text-lg)' }}>{labels.summaryTitle}</h2>
         {cart.items.map((i) => (
           <div key={i.productId} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', fontSize: 'var(--text-sm)' }}>
-            <span>{i.name} × {i.qty}</span>
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(i.price * i.qty)}</span>
+            <span>
+              {i.name} × {i.qty}
+              {i.rental ? <em style={{ color: 'var(--color-text-muted)' }}> ({i.rental.days} días)</em> : null}
+            </span>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(cartLineTotal(i))}</span>
           </div>
         ))}
         <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '.2rem 0' }} />
