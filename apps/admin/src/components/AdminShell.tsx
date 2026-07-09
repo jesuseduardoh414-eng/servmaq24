@@ -10,6 +10,7 @@ const NAV = [
   { href: '/cotizaciones', label: 'Cotizaciones' },
   { href: '/vendedores', label: 'Vendedores' },
   { href: '/retiros', label: 'Retiros' },
+  { href: '/temas', label: 'Temas / Diseño' },
 ];
 
 export function AdminShell({ adminName, children }: { adminName: string; children: ReactNode }) {
