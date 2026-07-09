@@ -37,73 +37,74 @@ const sectionTitle: React.CSSProperties = {
 };
 
 export async function Hero({ theme }: { theme: Theme }) {
-  // Contenido del hero: BD (hero_sections, editable en admin) con
-  // fallback a los copys del tema.
+  // Réplica del hero original: imagen de fondo a lo ancho con overlay,
+  // badge, título en letra display (script), pills y CTA.
+  // Contenido desde la BD (hero_sections, editable en admin) con fallback a copys.
   const hero = await getHero().catch(() => null);
   const title = hero?.title ?? t(theme, 'home.hero.title');
   const subtitle = hero?.subtitle ?? t(theme, 'home.hero.subtitle');
+  const pills = [hero?.feature1, hero?.feature2].filter((x): x is string => Boolean(x));
 
   return (
-    <section
-      style={{
-        background: 'var(--color-surface)',
-        borderBottom: '1px solid var(--color-border)',
-        padding: '3.5rem 1.5rem',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: hero?.image ? 'repeat(auto-fit, minmax(300px, 1fr))' : '1fr',
-          gap: '2rem',
-          alignItems: 'center',
-        }}
-      >
-        <div style={{ display: 'grid', gap: '1rem', textAlign: hero?.image ? 'left' : 'center' }}>
-          {hero?.badge ? (
-            <span
-              style={{
-                justifySelf: hero?.image ? 'start' : 'center',
-                color: 'var(--color-accent)',
-                fontWeight: 700,
-                fontSize: 'var(--text-sm)',
-                letterSpacing: '.08em',
-              }}
-            >
-              {hero.badge}
-            </span>
-          ) : null}
-          <h1 style={{ fontSize: 'var(--text-3xl)', lineHeight: 1.15 }}>{title}</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-lg)', margin: 0 }}>
-            {subtitle}
-          </p>
-          {(hero?.feature1 || hero?.feature2) ? (
-            <ul style={{ margin: 0, paddingLeft: '1.2rem', color: 'var(--color-text-muted)' }}>
-              {hero.feature1 ? <li>{hero.feature1}</li> : null}
-              {hero.feature2 ? <li>{hero.feature2}</li> : null}
-            </ul>
-          ) : null}
-          <div style={{ justifySelf: hero?.image ? 'start' : 'center' }}>
-            <Link href="/productos">
-              <Button size="lg">{t(theme, 'home.hero.cta')}</Button>
-            </Link>
-          </div>
-        </div>
-        {hero?.image ? (
-          <div
-            style={{
-              position: 'relative',
-              aspectRatio: '4 / 3',
-              borderRadius: 'var(--radius-lg)',
-              overflow: 'hidden',
-              border: '1px solid var(--color-border)',
-            }}
+    <section className="relative overflow-hidden">
+      {/* Imagen de fondo + overlay oscuro */}
+      {hero?.image ? (
+        <Image
+          src={hero.image}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          style={{ objectFit: 'cover' }}
+          aria-hidden
+        />
+      ) : null}
+      <div className="absolute inset-0" style={{ background: 'color-mix(in srgb, var(--color-secondary) 55%, transparent)' }} />
+
+      <div className="relative max-w-[900px] mx-auto px-6 py-20 md:py-28 grid gap-5 text-center justify-items-center">
+        {hero?.badge ? (
+          <span
+            className="uppercase tracking-[.25em] font-semibold text-(length:--text-sm) text-white px-4 py-1.5"
+            style={{ background: 'color-mix(in srgb, var(--color-secondary) 75%, black)' }}
           >
-            <Image src={hero.image} alt={title ?? ''} fill priority sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit: 'cover' }} />
+            {hero.badge}
+          </span>
+        ) : null}
+
+        <h1
+          className="text-white leading-tight"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(2.2rem, 6vw, 4rem)',
+            textShadow: '0 2px 12px rgba(0,0,0,.45)',
+          }}
+        >
+          {title}
+        </h1>
+
+        <p className="text-white/95 text-(length:--text-lg) max-w-2xl m-0" style={{ textShadow: '0 1px 8px rgba(0,0,0,.5)' }}>
+          {subtitle}
+        </p>
+
+        {pills.length > 0 ? (
+          <div className="flex gap-4 flex-wrap justify-center">
+            {pills.map((p) => (
+              <span
+                key={p}
+                className="uppercase tracking-wide font-semibold text-(length:--text-sm) text-white px-5 py-3 border-b-4 border-brand"
+                style={{ background: 'color-mix(in srgb, var(--color-secondary) 85%, black)' }}
+              >
+                ✓ {p}
+              </span>
+            ))}
           </div>
         ) : null}
+
+        <Link href="/contacto" className="no-underline mt-2">
+          <Button size="lg" className="uppercase tracking-widest px-10">
+            {t(theme, 'home.hero.cta')}
+          </Button>
+        </Link>
       </div>
     </section>
   );

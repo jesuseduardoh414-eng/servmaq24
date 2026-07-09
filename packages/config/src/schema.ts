@@ -35,6 +35,8 @@ export const typographySchema = z.object({
   fontSans: z.string().min(1),
   /** Familia para titulares (puede ser la misma). */
   fontHeading: z.string().min(1),
+  /** Familia decorativa (título del hero, estilo script del sitio original). */
+  fontDisplay: z.string().min(1).optional(),
   /** Tamaño base del body en px. */
   baseSizePx: z.number().min(12).max(22),
   /** Razón de la escala modular (1.2 = compacta, 1.333 = amplia). */

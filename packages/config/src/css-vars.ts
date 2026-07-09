@@ -24,11 +24,12 @@ function paletteVars(p: Palette): string {
 }
 
 function scaleVars(t: ThemeTokens): string {
-  const { baseSizePx, scaleRatio, fontSans, fontHeading } = t.typography;
+  const { baseSizePx, scaleRatio, fontSans, fontHeading, fontDisplay } = t.typography;
   const step = (n: number) => `${(baseSizePx * Math.pow(scaleRatio, n)).toFixed(2)}px`;
   return [
     `--font-sans:'${fontSans}',system-ui,sans-serif`,
     `--font-heading:'${fontHeading}',system-ui,sans-serif`,
+    `--font-display:'${fontDisplay ?? fontHeading}',cursive`,
     `--text-sm:${step(-1)}`,
     `--text-base:${baseSizePx}px`,
     `--text-lg:${step(1)}`,

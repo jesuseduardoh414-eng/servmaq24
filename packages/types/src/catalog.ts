@@ -58,4 +58,5 @@ export interface Paginated<T> {
 export interface SiteSettings {
   email: string | null;
   phone: string | null;
+  logo: string | null;
 }
