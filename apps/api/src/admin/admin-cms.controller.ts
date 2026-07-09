@@ -293,6 +293,43 @@ export class AdminCmsController {
     return { ok: true };
   }
 
+  // ---- Banners (tabla legacy: UNA fila con slots top1..top5 / bottom1..2) ----
+
+  @Get('banners')
+  async banners() {
+    const b = await prisma.banners.findFirst();
+    const SLOTS = ['top1', 'top2', 'top3', 'top4', 'top5', 'bottom1', 'bottom2'] as const;
+    const row = (b ?? {}) as Record<string, string | null>;
+    return SLOTS.map((slot) => ({
+      slot,
+      image: imageUrl(row[slot] ?? null),
+      link: row[`${slot}l`] ?? null,
+    }));
+  }
+
+  @Patch('banners/:slot')
+  @UseInterceptors(FileInterceptor('photo', { storage: photoStorage, limits: { fileSize: 6 * 1024 * 1024 } }))
+  async updateBanner(
+    @Param('slot') slot: string,
+    @Body() body: { link?: string; clear?: string },
+    @UploadedFile() photo?: Express.Multer.File,
+  ) {
+    if (!/^(top[1-5]|bottom[12])$/.test(slot)) throw new BadRequestException('Slot inválido');
+    photoOk(photo);
+    let b = await prisma.banners.findFirst();
+    if (!b) b = await prisma.banners.create({ data: {} });
+
+    const data: Record<string, string | null> = {};
+    if (photo) data[slot] = `uploads/${photo.filename}`;
+    if (body?.link !== undefined) data[`${slot}l`] = String(body.link) || null;
+    if (body?.clear === 'true') {
+      data[slot] = null;
+      data[`${slot}l`] = null;
+    }
+    await prisma.banners.update({ where: { id: b.id }, data });
+    return { ok: true };
+  }
+
   // ---- Ajustes de contacto (generalsettings) ----
 
   @Get('settings')

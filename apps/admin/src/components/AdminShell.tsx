@@ -12,6 +12,10 @@ const NAV = [
   { href: '/retiros', label: 'Retiros' },
   { href: '/blog', label: 'Blog' },
   { href: '/faqs', label: 'FAQ' },
+  { href: '/contenido', label: 'Contenido' },
+  { href: '/banners', label: 'Banners' },
+  { href: '/usuarios', label: 'Clientes' },
+  { href: '/resenas', label: 'Reseñas' },
   { href: '/ajustes', label: 'Ajustes' },
   { href: '/temas', label: 'Temas / Diseño' },
 ];
