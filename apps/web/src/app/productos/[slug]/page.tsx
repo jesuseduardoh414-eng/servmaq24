@@ -153,8 +153,8 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
               ) : null}
             </div>
 
-            {/* CTAs: carrito (F2, oculto en quoteMode) + contacto por correo.
-                Checkout llega en el siguiente slice; flujo RFQ completo en F3. */}
+            {/* CTAs: carrito (oculto en quoteMode) + cotización (flujo RFQ real)
+                + contacto por correo como secundario. */}
             <div style={{ display: 'flex', gap: '.7rem', flexWrap: 'wrap' }}>
               {!quoteMode && product.price !== null && product.inStock ? (
                 <AddToCart
@@ -169,11 +169,14 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
                   addedLabel={t(theme, 'cart.added')}
                 />
               ) : null}
-              {inquiryHref ? (
+              {quoteMode || product.isRental || product.price === null ? (
+                <Link href={`/cotizar?producto=${product.slug}`} style={{ textDecoration: 'none' }}>
+                  <Button size="lg">{t(theme, 'product.cta.quote')}</Button>
+                </Link>
+              ) : null}
+              {inquiryHref && !quoteMode ? (
                 <a href={inquiryHref} style={{ textDecoration: 'none' }}>
-                  <Button size="lg">
-                    {quoteMode ? t(theme, 'product.cta.quote') : t(theme, 'product.cta.inquiry')}
-                  </Button>
+                  <Button size="lg" variant="ghost">{t(theme, 'product.cta.inquiry')}</Button>
                 </a>
               ) : null}
             </div>

@@ -6,9 +6,10 @@ import { SettingsModule } from './settings/settings.module';
 import { ContentModule } from './content/content.module';
 import { AuthModule } from './auth/auth.module';
 import { OrdersModule } from './orders/orders.module';
+import { QuotesModule } from './quotes/quotes.module';
 
 @Module({
-  imports: [AuthModule, ThemeModule, CatalogModule, SettingsModule, ContentModule, OrdersModule],
+  imports: [AuthModule, ThemeModule, CatalogModule, SettingsModule, ContentModule, OrdersModule, QuotesModule],
   controllers: [HealthController],
 })
 export class AppModule {}
