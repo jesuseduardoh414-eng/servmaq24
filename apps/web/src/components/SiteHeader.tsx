@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Theme } from '@servmaq/config';
 import { t } from '@/lib/theme';
 import { HeaderActions } from '@/components/HeaderActions';
+import { Newsletter } from '@/components/Newsletter';
 
 export function SiteHeader({ theme }: { theme: Theme }) {
   return (
@@ -35,6 +36,12 @@ export function SiteHeader({ theme }: { theme: Theme }) {
           <Link href="/productos" style={{ color: 'var(--color-text-muted)', textDecoration: 'none' }}>
             {t(theme, 'nav.products')}
           </Link>
+          <Link href="/quienes-somos" style={{ color: 'var(--color-text-muted)', textDecoration: 'none' }}>
+            {t(theme, 'nav.about')}
+          </Link>
+          <Link href="/contacto" style={{ color: 'var(--color-text-muted)', textDecoration: 'none' }}>
+            {t(theme, 'nav.contact')}
+          </Link>
           <HeaderActions
             labels={{
               cart: t(theme, 'nav.cart'),
@@ -55,13 +62,26 @@ export function SiteFooter({ theme }: { theme: Theme }) {
       style={{
         borderTop: '1px solid var(--color-border)',
         marginTop: '3rem',
-        padding: '1.5rem',
+        padding: '2rem 1.5rem 1.5rem',
+        display: 'grid',
+        gap: '1.4rem',
         textAlign: 'center',
         color: 'var(--color-text-muted)',
         fontSize: 'var(--text-sm)',
       }}
     >
-      {t(theme, 'site.name')} © {new Date().getFullYear()} — {t(theme, 'footer.rights')}
+      <Newsletter
+        labels={{
+          title: t(theme, 'newsletter.title'),
+          placeholder: t(theme, 'newsletter.placeholder'),
+          submit: t(theme, 'newsletter.submit'),
+          success: t(theme, 'newsletter.success'),
+          error: t(theme, 'newsletter.error'),
+        }}
+      />
+      <span>
+        {t(theme, 'site.name')} © {new Date().getFullYear()} — {t(theme, 'footer.rights')}
+      </span>
     </footer>
   );
 }

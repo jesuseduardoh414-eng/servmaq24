@@ -145,6 +145,33 @@ export class ContentService {
     };
   }
 
+  /** Página Quiénes Somos (tabla legacy inf_sitio, una fila). */
+  async infSitio() {
+    const r = await prisma.inf_sitio.findFirst({ orderBy: { id: 'desc' } });
+    if (!r) return null;
+    let imagenes: string[] = [];
+    try {
+      const parsed = JSON.parse(r.imagenes ?? '[]');
+      if (Array.isArray(parsed)) imagenes = parsed.map((x) => imageUrl(String(x))).filter((u): u is string => u !== null);
+    } catch { /* legacy sin JSON */ }
+    return {
+      frase: r.frase,
+      titulo: r.titulo,
+      descripcion: r.descripcion,
+      mision: r.mision,
+      vision: r.vision,
+      objetivos: r.objetivos,
+      imagenes,
+    };
+  }
+
+  /** Alta de newsletter (email único; repetido = ok idempotente). */
+  async subscribe(email: string): Promise<{ ok: boolean }> {
+    const exists = await prisma.subscribers.findUnique({ where: { email } });
+    if (!exists) await prisma.subscribers.create({ data: { email } });
+    return { ok: true };
+  }
+
   async faqs(): Promise<FaqItem[]> {
     const rows = await prisma.faqs.findMany({ orderBy: { id: 'asc' } });
     return rows.map((f) => ({ id: f.id, question: f.title, answer: f.text }));

@@ -48,6 +48,7 @@ export class ProductsService {
     category?: string; // cat_slug
     featured?: boolean;
     vendorId?: number; // tienda de un vendedor (products.user_id)
+    subcategory?: string; // sub_slug
   }): Promise<Paginated<ProductCard>> {
     const page = Math.max(1, opts.page ?? 1);
 
@@ -56,6 +57,10 @@ export class ProductsService {
     if (opts.search) where.name = { contains: opts.search };
     if (opts.featured) where.featured = 1;
     if (opts.vendorId) where.user_id = opts.vendorId;
+    if (opts.subcategory) {
+      const sub = await prisma.subcategories.findFirst({ where: { sub_slug: opts.subcategory } });
+      where.subcategory_id = sub ? sub.id : -1;
+    }
     if (opts.category) {
       const cat = await prisma.categories.findUnique({ where: { cat_slug: opts.category } });
       where.category_id = cat ? cat.id : -1; // categoría inexistente → 0 resultados

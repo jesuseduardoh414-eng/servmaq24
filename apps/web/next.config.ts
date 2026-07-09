@@ -28,12 +28,12 @@ const nextConfig: NextConfig = {
       { source: '/childcategory/:slug/:sort', destination: '/productos', permanent: true },
       { source: '/search/:q', destination: '/productos?q=:q', permanent: true },
       { source: '/search/:q/:sort', destination: '/productos?q=:q', permanent: true },
-      // Páginas aún sin equivalente propio: a la home mientras llegan (CMS F1.x/F4)
-      { source: '/faq', destination: '/', permanent: false },
-      { source: '/contact', destination: '/', permanent: false },
-      { source: '/quienes-somos', destination: '/', permanent: false },
-      { source: '/stores', destination: '/', permanent: false },
-      { source: '/Marcas', destination: '/', permanent: false },
+      // Equivalentes definitivos de las páginas legacy
+      { source: '/faq', destination: '/', permanent: true }, // FAQ es sección de la home
+      { source: '/contact', destination: '/contacto', permanent: true },
+      { source: '/stores', destination: '/vendedores', permanent: true },
+      { source: '/Marcas', destination: '/vendedores', permanent: true },
+      { source: '/track', destination: '/rastreo', permanent: true },
     ];
   },
 };

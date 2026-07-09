@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import { Button, Input } from '@servmaq/ui';
 import { getTheme, t } from '@/lib/theme';
-import { getProducts, getCategories } from '@/lib/api';
+import { getProducts, getCategories, getSubcategories } from '@/lib/api';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 import { ProductCard } from '@/components/ProductCard';
 import { Pagination } from '@/components/Pagination';
 import Link from 'next/link';
 
-type Search = { q?: string; categoria?: string; page?: string };
+type Search = { q?: string; categoria?: string; subcategoria?: string; page?: string };
 
 export async function generateMetadata(): Promise<Metadata> {
   const theme = await getTheme();
@@ -19,16 +19,18 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function CatalogPage({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams;
   const page = Number(sp.page ?? 1) || 1;
-  const [theme, categories, result] = await Promise.all([
+  const [theme, categories, result, subcategories] = await Promise.all([
     getTheme(),
     getCategories(),
-    getProducts({ page, search: sp.q, category: sp.categoria }),
+    getProducts({ page, search: sp.q, category: sp.categoria, subcategory: sp.subcategoria }),
+    sp.categoria ? getSubcategories(sp.categoria).catch(() => []) : Promise.resolve([]),
   ]);
 
   const makeHref = (p: number) => {
     const q = new URLSearchParams();
     if (sp.q) q.set('q', sp.q);
     if (sp.categoria) q.set('categoria', sp.categoria);
+    if (sp.subcategoria) q.set('subcategoria', sp.subcategoria);
     if (p > 1) q.set('page', String(p));
     const qs = q.toString();
     return `/productos${qs ? `?${qs}` : ''}`;
@@ -57,7 +59,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         </form>
 
         {/* Filtro por categoría */}
-        <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1.6rem' }}>
+        <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: subcategories.length > 0 ? '.6rem' : '1.6rem' }}>
           <CategoryChip href="/productos" active={!sp.categoria} label={t(theme, 'catalog.filter.all')} />
           {categories.map((c) => (
             <CategoryChip
@@ -68,6 +70,20 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
             />
           ))}
         </div>
+
+        {/* Subcategorías de la categoría elegida */}
+        {subcategories.length > 0 ? (
+          <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1.6rem' }}>
+            {subcategories.map((s) => (
+              <CategoryChip
+                key={s.id}
+                href={`/productos?categoria=${sp.categoria}&subcategoria=${s.slug}${sp.q ? `&q=${encodeURIComponent(sp.q)}` : ''}`}
+                active={sp.subcategoria === s.slug}
+                label={s.name}
+              />
+            ))}
+          </div>
+        ) : null}
 
         {result.items.length === 0 ? (
           <p style={{ color: 'var(--color-text-muted)', padding: '2rem 0' }}>{t(theme, 'catalog.empty')}</p>

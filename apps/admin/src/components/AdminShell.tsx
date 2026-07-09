@@ -16,6 +16,7 @@ const NAV = [
   { href: '/banners', label: 'Banners' },
   { href: '/usuarios', label: 'Clientes' },
   { href: '/resenas', label: 'Reseñas' },
+  { href: '/suscriptores', label: 'Suscriptores' },
   { href: '/ajustes', label: 'Ajustes' },
   { href: '/temas', label: 'Temas / Diseño' },
 ];

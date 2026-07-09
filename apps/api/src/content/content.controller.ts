@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { ContentService } from './content.service';
 
 @Controller('content')
@@ -43,6 +43,20 @@ export class ContentController {
   @Get('blogs/:id')
   blogById(@Param('id', ParseIntPipe) id: number) {
     return this.content.blogById(id);
+  }
+
+  @Get('inf-sitio')
+  infSitio() {
+    return this.content.infSitio();
+  }
+
+  @Post('subscribe')
+  subscribe(@Body() body: { email?: string }) {
+    const email = String(body?.email ?? '').trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 190) {
+      throw new BadRequestException('Correo inválido');
+    }
+    return this.content.subscribe(email);
   }
 
   @Get('faqs')

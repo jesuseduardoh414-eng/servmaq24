@@ -32,15 +32,21 @@ export function getProducts(opts: {
   page?: number;
   search?: string;
   category?: string;
+  subcategory?: string;
   featured?: boolean;
 } = {}): Promise<Paginated<ProductCard>> {
   const q = new URLSearchParams();
   if (opts.page) q.set('page', String(opts.page));
   if (opts.search) q.set('search', opts.search);
   if (opts.category) q.set('category', opts.category);
+  if (opts.subcategory) q.set('subcategory', opts.subcategory);
   if (opts.featured) q.set('featured', '1');
   const qs = q.toString();
   return get(`/catalog/products${qs ? `?${qs}` : ''}`);
+}
+
+export function getSubcategories(categorySlug: string): Promise<Array<{ id: number; name: string; slug: string }>> {
+  return get(`/catalog/categories/${encodeURIComponent(categorySlug)}/subcategories`);
 }
 
 export function getProduct(id: number): Promise<ProductDetail> {

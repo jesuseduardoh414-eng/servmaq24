@@ -330,6 +330,37 @@ export class AdminCmsController {
     return { ok: true };
   }
 
+  // ---- Quiénes somos (inf_sitio) ----
+
+  @Get('inf-sitio')
+  async infSitio() {
+    const r = await prisma.inf_sitio.findFirst({ orderBy: { id: 'desc' } });
+    return r
+      ? { frase: r.frase, titulo: r.titulo, descripcion: r.descripcion, mision: r.mision, vision: r.vision, objetivos: r.objetivos }
+      : null;
+  }
+
+  @Patch('inf-sitio')
+  async updateInfSitio(@Body() body: unknown) {
+    const schema = z.object({
+      frase: z.string().max(250).optional(),
+      titulo: z.string().max(250).optional(),
+      descripcion: z.string().max(10000).optional(),
+      mision: z.string().max(5000).optional(),
+      vision: z.string().max(5000).optional(),
+      objetivos: z.string().max(5000).optional(),
+    });
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException('Datos inválidos');
+    const existing = await prisma.inf_sitio.findFirst({ orderBy: { id: 'desc' } });
+    if (existing) {
+      await prisma.inf_sitio.update({ where: { id: existing.id }, data: { ...parsed.data, updated_at: new Date() } });
+    } else {
+      await prisma.inf_sitio.create({ data: { ...parsed.data, created_at: new Date(), updated_at: new Date() } });
+    }
+    return { ok: true };
+  }
+
   // ---- Ajustes de contacto (generalsettings) ----
 
   @Get('settings')

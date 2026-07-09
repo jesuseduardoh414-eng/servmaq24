@@ -84,6 +84,19 @@ export class AdminCommunityController {
     return { ok: true };
   }
 
+  // ---- Suscriptores del newsletter ----
+
+  @Get('subscribers')
+  async subscribers() {
+    return prisma.subscribers.findMany({ orderBy: { id: 'desc' } });
+  }
+
+  @Delete('subscribers/:id')
+  async deleteSubscriber(@Param('id', ParseIntPipe) id: number) {
+    await prisma.subscribers.delete({ where: { id } });
+    return { ok: true };
+  }
+
   // ---- Comentarios de producto ----
 
   @Get('comments')
