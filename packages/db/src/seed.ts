@@ -16,7 +16,13 @@ async function main() {
       copys: theme.copys,
       publishedAt: new Date(),
     },
-    update: {}, // si ya existe no lo pisamos: puede tener ediciones del admin
+    // Pre-admin (F1): sincroniza tokens/copys con el default para propagar
+    // claves nuevas. CUANDO EXISTA EL EDITOR VISUAL (F4) esto debe volverse
+    // un merge que respete las ediciones del admin — no un reemplazo.
+    update: {
+      tokens: theme.tokens,
+      copys: theme.copys,
+    },
   });
 
   console.log(`Tema "${theme.slug}" sembrado.`);

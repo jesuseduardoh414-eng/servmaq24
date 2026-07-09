@@ -13,7 +13,8 @@
     "@servmaq/ui": "workspace:*",
     "next": "^15.3.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "@servmaq/types": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
