@@ -11,3 +11,6 @@ dist/
 
 # Prisma
 packages/db/generated/
+
+# Imágenes de referencia/diseño (scratch local; los assets reales viven en Supabase Storage)
+imagenes/

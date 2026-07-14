@@ -1,0 +1,56 @@
+# Render Blueprint para la API NestJS (@maqserv/api).
+# La API es STATELESS: datos en Supabase Postgres, imágenes en Supabase Storage.
+# Por eso NO necesita disco persistente.
+#
+# Uso: en Render → New → Blueprint → conecta el repo servmaq24.
+# Render lee este archivo, crea el servicio y te pide las variables marcadas `sync: false`.
+services:
+  - type: web
+    name: servmaq-api
+    runtime: node
+    region: oregon          # cámbialo a la región más cercana a tus usuarios
+    plan: free              # el plan free "duerme" tras inactividad; sube a "starter" para producción
+    rootDir: .              # el repo raíz ES servmaq-platform (aquí vive el .git)
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm turbo run build --filter=@maqserv/api
+    startCommand: pnpm --filter @maqserv/api start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      # --- Base de datos (Supabase Postgres). Copia los valores desde packages/db/.env ---
+      - key: DATABASE_URL         # pooler transaction, puerto 6543, con ?pgbouncer=true
+        sync: false
+      - key: DIRECT_URL           # pooler session, puerto 5432
+        sync: false
+      # --- Supabase (Auth + Storage) ---
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY # service_role — SECRETO, no lo compartas
+        sync: false
+      - key: IMAGE_BASE_URL       # https://<proyecto>.supabase.co/storage/v1/object/public/media
+        sync: false
+      # --- URLs públicas ---
+      - key: SITE_URL             # dominio de la tienda en Vercel (back_urls de pago, revalidación)
+        sync: false
+      - key: API_PUBLIC_URL       # esta misma URL de Render (webhook de MercadoPago)
+        sync: false
+      - key: CORS_ORIGINS         # dominios web y admin de Vercel, separados por coma
+        sync: false
+      # --- Pagos ---
+      - key: MP_ACCESS_TOKEN      # access token de MercadoPago
+        sync: false
+      # --- Revalidación on-demand del sitio Next (mismo valor que en la web) ---
+      - key: REVALIDATE_SECRET
+        sync: false
+      # --- Opcionales (déjalas sin valor si no las usas) ---
+      - key: PERFEX_URL
+        sync: false
+      - key: PERFEX_TOKEN
+        sync: false
+      - key: GOOGLE_DISTANCE_MATRIX_API_KEY
+        sync: false
