@@ -161,7 +161,7 @@ export function ContactEditor({ themeId, copys, tokens, contact }: {
               </label>
             </div>
           ))}
-          <div><button type="button" onClick={() => setC({ branches: [...config.branches, { city: '', address: '', phone: '', isNew: false }] })} style={addBtn}><i className="ph ph-plus" /> Agregar sucursal</button></div>
+          <div><button type="button" onClick={() => setC({ branches: [...config.branches, { city: '', address: '', phone: '', image: null, isNew: false }] })} style={addBtn}><i className="ph ph-plus" /> Agregar sucursal</button></div>
         </div>
       </div>
 

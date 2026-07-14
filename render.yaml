@@ -11,7 +11,9 @@ services:
     region: oregon          # cámbialo a la región más cercana a tus usuarios
     plan: free              # el plan free "duerme" tras inactividad; sube a "starter" para producción
     rootDir: .              # el repo raíz ES servmaq-platform (aquí vive el .git)
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm turbo run build --filter=@maqserv/api
+    # No usar `corepack enable` en Render: /usr/bin es read-only (EROFS). Render ya
+    # provee pnpm al detectar pnpm-lock.yaml + el campo packageManager del package.json.
+    buildCommand: pnpm install --frozen-lockfile && pnpm turbo run build --filter=@maqserv/api
     startCommand: pnpm --filter @maqserv/api start
     healthCheckPath: /health
     autoDeploy: true
