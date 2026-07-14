@@ -1,18 +1,10 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtGuard } from './jwt.guard';
 
+// Auth ahora vía Supabase Auth (ver common/supabase-auth.ts); ya no se firman JWT propios.
 @Module({
-  imports: [
-    JwtModule.register({
-      global: true,
-      // Dev default; en producción SIEMPRE definir JWT_SECRET por env
-      secret: process.env.JWT_SECRET ?? 'servmaq-dev-secret-cambiar-en-produccion',
-      signOptions: { expiresIn: '7d' },
-    }),
-  ],
   controllers: [AuthController],
   providers: [AuthService, JwtGuard],
   exports: [JwtGuard],

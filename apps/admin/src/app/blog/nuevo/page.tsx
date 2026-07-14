@@ -7,8 +7,7 @@ export default async function NewBlogPage() {
   const admin = await getAdmin();
   if (!admin) redirect('/login');
   return (
-    <AdminShell adminName={admin.name}>
-      <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: '1.2rem' }}>Nueva entrada</h1>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <BlogForm initial={{}} />
     </AdminShell>
   );

@@ -1,5 +1,5 @@
 import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
-import { prisma } from '@servmaq/db';
+import { prisma } from '@maqserv/db';
 import { ProductsService } from './products.service';
 import { CategoriesService } from './categories.service';
 

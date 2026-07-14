@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { prisma } from '@servmaq/db';
+import { prisma } from '@maqserv/db';
 import { AdminGuard, type AdminRequest } from './admin-auth';
 
 /** Comunidad: usuarios, reseñas del sitio y comentarios de producto. */
@@ -182,13 +182,77 @@ export class AdminCommunityController {
       product: prods.get(c.product_id) ?? `#${c.product_id}`,
       rating: c.rating ?? 5,
       text: c.text,
+      status: c.status, // 1 visible/aprobada, 0 oculta
+      verified: c.order_id != null, // proviene de una compra
       createdAt: c.created_at ? c.created_at.toISOString() : null,
     }));
+  }
+
+  @Patch('comments/:id')
+  async updateComment(@Param('id', ParseIntPipe) id: number, @Body() body: { status?: number }) {
+    const status = Number(body?.status);
+    if (![0, 1].includes(status)) throw new BadRequestException('status debe ser 0 o 1');
+    await prisma.comments.update({ where: { id }, data: { status, updated_at: new Date() } });
+    return { ok: true };
   }
 
   @Delete('comments/:id')
   async deleteComment(@Param('id', ParseIntPipe) id: number) {
     await prisma.comments.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ---- Preguntas de producto (tipo MercadoLibre) ----
+
+  @Get('questions')
+  async questions() {
+    const rows = await prisma.product_questions.findMany({ orderBy: { id: 'desc' }, take: 200 });
+    const [users, products] = await Promise.all([
+      prisma.users.findMany({ where: { id: { in: rows.map((r) => r.user_id) } }, select: { id: true, name: true } }),
+      prisma.products.findMany({ where: { id: { in: rows.map((r) => r.product_id) } }, select: { id: true, name: true } }),
+    ]);
+    const names = new Map(users.map((u) => [u.id, u.name]));
+    const prods = new Map(products.map((p) => [p.id, p.name]));
+    return rows.map((q) => ({
+      id: q.id,
+      author: names.get(q.user_id) ?? `#${q.user_id}`,
+      product: prods.get(q.product_id) ?? `#${q.product_id}`,
+      productId: q.product_id,
+      question: q.question,
+      answer: q.answer,
+      answered: q.answer != null,
+      status: q.status,
+      featured: q.featured === 1,
+      createdAt: q.created_at ? q.created_at.toISOString() : null,
+    }));
+  }
+
+  @Patch('questions/:id')
+  async answerQuestion(@Param('id', ParseIntPipe) id: number, @Body() body: { answer?: string; status?: number; featured?: number }) {
+    const data: { answer?: string | null; answered_at?: Date | null; status?: number; featured?: number; updated_at: Date } = { updated_at: new Date() };
+    if (typeof body?.answer === 'string') {
+      const a = body.answer.trim();
+      data.answer = a || null;
+      data.answered_at = a ? new Date() : null;
+      if (!a) data.featured = 0; // sin respuesta no puede estar destacada
+    }
+    if (body?.status !== undefined) {
+      const s = Number(body.status);
+      if (![0, 1].includes(s)) throw new BadRequestException('status debe ser 0 o 1');
+      data.status = s;
+    }
+    if (body?.featured !== undefined) {
+      const fe = Number(body.featured);
+      if (![0, 1].includes(fe)) throw new BadRequestException('featured debe ser 0 o 1');
+      data.featured = fe;
+    }
+    await prisma.product_questions.update({ where: { id }, data });
+    return { ok: true };
+  }
+
+  @Delete('questions/:id')
+  async deleteQuestion(@Param('id', ParseIntPipe) id: number) {
+    await prisma.product_questions.delete({ where: { id } });
     return { ok: true };
   }
 }

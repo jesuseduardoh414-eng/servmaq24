@@ -14,7 +14,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   if (!product) notFound();
 
   return (
-    <AdminShell adminName={admin.name}>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: '1.2rem' }}>Editar: {product.name}</h1>
       <ProductForm initial={product} categories={categories ?? []} />
     </AdminShell>

@@ -12,5 +12,7 @@ export interface AuthUser {
 
 export interface AuthResponse {
   token: string;
+  /** Refresh token de Supabase (para renovar el access token de 1h). */
+  refresh_token?: string;
   user: AuthUser;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button, Input } from '@servmaq/ui';
+import { Button, Input } from '@maqserv/ui';
 import { useCart } from '@/components/CartProvider';
 import { formatPrice } from '@/lib/format';
 

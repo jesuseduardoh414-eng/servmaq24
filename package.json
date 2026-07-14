@@ -1,5 +1,5 @@
 {
-  "name": "servmaq-platform",
+  "name": "maqserv-platform",
   "private": true,
   "version": "0.1.0",
   "description": "Plataforma e-commerce B2B (maquinaria/médico) — migración de scava.website a Next.js + NestJS + Prisma",
@@ -12,8 +12,8 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "db:generate": "pnpm --filter @servmaq/db generate",
-    "db:pull": "pnpm --filter @servmaq/db pull"
+    "db:generate": "pnpm --filter @maqserv/db generate",
+    "db:pull": "pnpm --filter @maqserv/db pull"
   },
   "devDependencies": {
     "turbo": "^2.5.0",

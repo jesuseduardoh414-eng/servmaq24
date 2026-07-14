@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import type { ProductCard } from '@servmaq/types';
-import { parseProductSlug } from '@servmaq/config';
+import type { ProductCard } from '@maqserv/types';
+import { parseProductSlug } from '@maqserv/config';
 import { getTheme, t } from '@/lib/theme';
 import { getSessionUser } from '@/lib/session';
 import { getProduct } from '@/lib/api';

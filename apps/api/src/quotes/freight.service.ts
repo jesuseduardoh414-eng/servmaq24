@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { prisma } from '@servmaq/db';
+import { prisma } from '@maqserv/db';
 
 export interface FreightDistance {
   km: number;

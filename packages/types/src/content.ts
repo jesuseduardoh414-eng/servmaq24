@@ -34,6 +34,8 @@ export interface WhyChooseUsItem {
   description: string;
   icon: string | null;
   photo: string | null;
+  /** Dónde se muestra: 'both' (default) | 'home' (solo landing) | 'about' (solo /quienes-somos). */
+  placement: 'both' | 'home' | 'about';
 }
 
 export interface ServiceItem {
@@ -60,6 +62,10 @@ export interface BlogCard {
   excerpt: string;
   image: string | null;
   date: string | null; // ISO
+  category: string; // p. ej. "Guías" (por defecto "General")
+  author: string | null; // byline (campo `source`), null si vacío
+  readTime: string; // calculado del contenido, p. ej. "6 MIN"
+  views: number; // para el ranking "Lo más leído"
 }
 
 export interface BlogDetail extends BlogCard {
@@ -80,4 +86,6 @@ export interface SiteReview {
   review: string;
   author: string;
   date: string | null;
+  /** Producto reseñado (reseñas ligadas a compra); null en reseñas legacy. */
+  product?: string | null;
 }

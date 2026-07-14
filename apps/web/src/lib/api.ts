@@ -14,18 +14,29 @@ import type {
   StrategicSector,
   StrategicSectorDetail,
   WhyChooseUsItem,
-} from '@servmaq/types';
+} from '@maqserv/types';
+
+import { cache } from 'react';
+import { CONTENT_CACHE } from '@/lib/theme';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 /**
- * ISR: cache con revalidación cada 60s + invalidación bajo demanda vía
- * /api/revalidate (el admin la disparará al publicar, F4).
+ * PROD: ISR 60s (+ invalidación bajo demanda). DEV: sin caché para que los
+ * cambios del admin se vean al refrescar, sin esperar. Ver CONTENT_CACHE.
+ *
+ * `cache()` deduplica por `path` dentro de un mismo render: si dos secciones
+ * piden el mismo endpoint (p. ej. /catalog/categories o /theme), se hace UNA
+ * sola llamada por request → menos viajes al DB, carga más rápida.
  */
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { next: { revalidate: 60 } });
+const fetchJson = cache(async (path: string): Promise<unknown> => {
+  const res = await fetch(`${API_URL}${path}`, CONTENT_CACHE);
   if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
-  return res.json() as Promise<T>;
+  return res.json();
+});
+
+async function get<T>(path: string): Promise<T> {
+  return (await fetchJson(path)) as T;
 }
 
 export function getProducts(opts: {

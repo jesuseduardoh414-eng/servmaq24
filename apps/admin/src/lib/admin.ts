@@ -1,7 +1,9 @@
 import { cookies } from 'next/headers';
+import { ADMIN_COOKIE, API_URL } from './cookies';
 
-export const ADMIN_COOKIE = 'servmaq_admin';
-export const API_URL = process.env.API_URL ?? 'http://localhost:4000';
+// Estas constantes viven en ./cookies (sin next/headers) para que el middleware
+// Edge pueda importarlas; se reexportan aquí por compatibilidad.
+export { ADMIN_COOKIE, ADMIN_REFRESH_COOKIE, API_URL } from './cookies';
 
 /** Fetch autenticado del lado servidor con el token admin de la cookie. */
 export async function adminFetch<T>(path: string): Promise<T | null> {

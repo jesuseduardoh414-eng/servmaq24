@@ -11,7 +11,7 @@ export default async function EditSectorPage({ params }: { params: Promise<{ id:
   if (!sector) notFound();
 
   return (
-    <AdminShell adminName={admin.name}>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <h1 className="font-head text-(length:--text-2xl) mb-5">Sector: {sector.title}</h1>
       <SectorForm data={sector} />
     </AdminShell>

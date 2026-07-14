@@ -1,6 +1,6 @@
 import { BadRequestException, Controller, Get, NotFoundException, Query } from '@nestjs/common';
-import { prisma } from '@servmaq/db';
-import type { TrackingResult } from '@servmaq/types';
+import { prisma } from '@maqserv/db';
+import type { TrackingResult } from '@maqserv/types';
 
 /**
  * Rastreo PÚBLICO de pedidos (como el /track del legacy):

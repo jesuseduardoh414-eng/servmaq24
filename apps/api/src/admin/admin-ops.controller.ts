@@ -3,7 +3,7 @@ import {
   ParseIntPipe, Patch, Query, UseGuards,
 } from '@nestjs/common';
 import { z } from 'zod';
-import { prisma } from '@servmaq/db';
+import { prisma } from '@maqserv/db';
 import { AdminGuard } from './admin-auth';
 
 /** Operación diaria: órdenes, cotizaciones, vendedores y retiros. */

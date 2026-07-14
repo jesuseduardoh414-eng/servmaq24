@@ -3,8 +3,8 @@ import {
   ParseIntPipe, Patch, Post, UseGuards,
 } from '@nestjs/common';
 import { z } from 'zod';
-import { Prisma, prisma } from '@servmaq/db';
-import { copysSchema, slugify, themeTokensSchema } from '@servmaq/config';
+import { Prisma, prisma } from '@maqserv/db';
+import { copysSchema, slugify, themeTokensSchema } from '@maqserv/config';
 import { AdminGuard } from './admin-auth';
 
 const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3000';

@@ -3,27 +3,17 @@ import {
   ParseIntPipe, Patch, Post, Req, UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { supabaseStorage } from '../common/supabase-multer';
 import { extname, join } from 'path';
 import { mkdirSync } from 'fs';
 import { z } from 'zod';
-import { prisma } from '@servmaq/db';
-import { productSlug } from '@servmaq/config';
-import type { VendorMe, VendorOrderRow, VendorProductRow, WithdrawRow } from '@servmaq/types';
+import { prisma } from '@maqserv/db';
+import { productSlug } from '@maqserv/config';
+import type { VendorMe, VendorOrderRow, VendorProductRow, WithdrawRow } from '@maqserv/types';
 import { JwtGuard, type AuthedRequest } from '../auth/jwt.guard';
 import { imageUrl } from '../catalog/images';
 
-const UPLOADS_DIR = join(process.cwd(), 'uploads');
-mkdirSync(UPLOADS_DIR, { recursive: true });
-
-const photoStorage = diskStorage({
-  destination: UPLOADS_DIR,
-  filename: (_req, file, cb) => {
-    // Mismo espíritu que el legacy: timestamp + nombre saneado
-    const safe = file.originalname.replace(/[^a-zA-Z0-9.]+/g, '-').slice(-60);
-    cb(null, `${Date.now()}-${safe}`);
-  },
-});
+const photoStorage = supabaseStorage();
 
 const IMAGE_TYPES = /^image\/(png|jpe?g|webp|avif)$/;
 

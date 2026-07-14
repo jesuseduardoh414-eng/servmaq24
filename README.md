@@ -1,4 +1,4 @@
-# servmaq-platform
+# maqserv-platform
 
 Migración del e-commerce B2B (maquinaria/médico) de `scava.website` desde Laravel 11 hacia **Next.js + NestJS + Prisma + MySQL**, con **sistema de diseño 100% configurable** (cada color, texto y botón se edita en runtime desde la BD, sin recompilar).
 
@@ -12,10 +12,10 @@ apps/
   admin/    → (Fase 4) panel administrativo + editor visual de temas
   api/      → NestJS — API REST, un módulo por módulo de negocio
 packages/
-  config/   → @servmaq/config — schema Zod de tokens de tema + tema default
-  db/       → @servmaq/db — Prisma (schema por introspección de la BD real)
-  types/    → @servmaq/types — DTOs compartidos front↔back
-  ui/       → @servmaq/ui — componentes base que consumen SOLO tokens
+  config/   → @maqserv/config — schema Zod de tokens de tema + tema default
+  db/       → @maqserv/db — Prisma (schema por introspección de la BD real)
+  types/    → @maqserv/types — DTOs compartidos front↔back
+  ui/       → @maqserv/ui — componentes base que consumen SOLO tokens
 ```
 
 ## Regla de oro (no negociable)
@@ -32,7 +32,7 @@ pnpm install
 pnpm dev          # api :4000 + web :3000
 ```
 
-Requiere MariaDB/MySQL corriendo (XAMPP en dev) con la BD `servmaq_dev`.
+Requiere MariaDB/MySQL corriendo (XAMPP en dev) con la BD `maqserv_dev`.
 Variables: copia `packages/db/.env.example` → `packages/db/.env`.
 
 ## Fases

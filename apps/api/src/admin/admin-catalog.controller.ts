@@ -3,24 +3,16 @@ import {
   ParseIntPipe, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { supabaseStorage } from '../common/supabase-multer';
 import { join } from 'path';
 import { mkdirSync } from 'fs';
 import { z } from 'zod';
-import { prisma } from '@servmaq/db';
-import { productSlug, slugify } from '@servmaq/config';
+import { prisma } from '@maqserv/db';
+import { productSlug, slugify } from '@maqserv/config';
 import { AdminGuard } from './admin-auth';
 import { imageUrl } from '../catalog/images';
 
-const UPLOADS_DIR = join(process.cwd(), 'uploads');
-mkdirSync(UPLOADS_DIR, { recursive: true });
-const photoStorage = diskStorage({
-  destination: UPLOADS_DIR,
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9.]+/g, '-').slice(-60);
-    cb(null, `${Date.now()}-${safe}`);
-  },
-});
+const photoStorage = supabaseStorage();
 const IMAGE_TYPES = /^image\/(png|jpe?g|webp|avif)$/;
 
 const productSchema = z.object({
@@ -51,8 +43,15 @@ export class AdminCatalogController {
   // ---- Productos ----
 
   @Get('products')
-  async products(@Query('page') page?: string, @Query('search') search?: string) {
+  async products(
+    @Query('page') page?: string,
+    @Query('search') search?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
     const p = Math.max(1, Number(page ?? 1) || 1);
+    // El gestor del admin pide todo en una sola consulta (pageSize alto) para no
+    // encadenar N peticiones; cap de 500 para no traer un catálogo enorme de golpe.
+    const size = Math.min(500, Math.max(1, Number(pageSize ?? 20) || 20));
     const where: Record<string, unknown> = {};
     if (search) where.name = { contains: search };
     const [total, rows] = await Promise.all([
@@ -60,8 +59,8 @@ export class AdminCatalogController {
       prisma.products.findMany({
         where,
         orderBy: { id: 'desc' },
-        skip: (p - 1) * 20,
-        take: 20,
+        skip: (p - 1) * size,
+        take: size,
         select: {
           id: true, name: true, cprice: true, stock: true, status: true,
           featured: true, photo: true, is_rental: true, category_id: true, Marca: true,
@@ -73,7 +72,7 @@ export class AdminCatalogController {
     return {
       total,
       page: p,
-      pages: Math.max(1, Math.ceil(total / 20)),
+      pages: Math.max(1, Math.ceil(total / size)),
       items: rows.map((r) => ({
         id: r.id,
         slug: productSlug(r.name, r.id),

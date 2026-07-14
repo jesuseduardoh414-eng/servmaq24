@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import type { QuoteSummary } from '@servmaq/types';
+import type { QuoteSummary } from '@maqserv/types';
 import { getTheme, t } from '@/lib/theme';
 import { SESSION_COOKIE } from '@/lib/session';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
@@ -69,7 +69,7 @@ export default async function MyQuotesPage() {
                     fontSize: 'var(--text-sm)',
                     fontWeight: 700,
                     padding: '.25em .8em',
-                    borderRadius: '999px',
+                    borderRadius: 'var(--radius-sm)',
                     background: q.status === 'completed' ? 'var(--color-success)' : 'var(--color-warning)',
                     color: 'var(--color-primary-fg)',
                   }}

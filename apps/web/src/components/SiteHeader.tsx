@@ -1,126 +1,255 @@
 import Link from 'next/link';
-import Image from 'next/image';
-import type { Theme } from '@servmaq/config';
+import { defaultTheme, type Theme } from '@maqserv/config';
 import { t } from '@/lib/theme';
-import { getCategories, getSiteSettings } from '@/lib/api';
+import { getSiteSettings } from '@/lib/api';
 import { HeaderActions } from '@/components/HeaderActions';
-import { Newsletter } from '@/components/Newsletter';
+import { MainNav } from '@/components/MainNav';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { FooterNewsletter } from '@/components/FooterNewsletter';
+
+const CONTAINER: React.CSSProperties = { maxWidth: 1240, margin: '0 auto', padding: '0 26px' };
 
 /**
- * Header con la estructura del sitio original:
- *  1) barra superior marina: logo + buscador + teléfono/correo
- *  2) fila de navegación: CATEGORÍAS (dropdown) + links + sesión/carrito
- * Colores/textos siempre desde tokens/copys/BD.
+ * Header del diseño SEGAshop:
+ *  1) barra superior oscura: contacto + horario + accesos.
+ *  2) header sticky con logo, navegación y acciones (buscar/fav/carrito/sesión).
+ * Todo color/texto sale de tokens/copys/BD (regla de oro).
  */
 export async function SiteHeader({ theme }: { theme: Theme }) {
-  const [settings, categories] = await Promise.all([
-    getSiteSettings().catch(() => ({ email: null, phone: null, logo: null })),
-    getCategories().catch(() => []),
-  ]);
+  const settings = await getSiteSettings().catch(() => ({ email: null, phone: null, logo: null }));
+  const brand = t(theme, 'site.name');
+  // Canales de contacto (editables en Diseño → Contacto): alimentan la barra superior.
+  const contact = theme.tokens.contact ?? defaultTheme.tokens.contact;
+  const cPhone = contact.phone || settings.phone;
+  const cEmail = contact.email || settings.email;
 
   return (
-    <header>
-      {/* Barra superior (marino) */}
-      <div className="bg-second text-white">
-        <div className="max-w-[1160px] mx-auto px-4 py-3 flex items-center gap-5 flex-wrap">
-          <Link href="/" className="no-underline shrink-0">
-            {settings.logo ? (
-              <Image src={settings.logo} alt={t(theme, 'site.name')} width={120} height={44} style={{ objectFit: 'contain', height: 44, width: 'auto' }} />
-            ) : (
-              <strong className="font-head text-(length:--text-xl) text-white">{t(theme, 'site.name')}</strong>
+    <>
+      {/* Barra superior */}
+      <div style={{ background: 'var(--color-secondary)', color: 'rgba(255,255,255,.66)', fontSize: '12.5px', fontWeight: 300 }}>
+        <div style={{ ...CONTAINER, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', paddingTop: 9, paddingBottom: 9 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+            {cPhone ? (
+              <a href={`tel:${cPhone.replace(/\s+/g, '')}`} style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ color: 'var(--color-primary)' }}>✆</span>{cPhone}
+              </a>
+            ) : null}
+            {cEmail ? (
+              <a href={`mailto:${cEmail}`} style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ color: 'var(--color-primary)' }}>✉</span>{cEmail}
+              </a>
+            ) : null}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 7, opacity: 0.7 }}>
+              <span style={{ color: 'var(--color-primary)' }}>◷</span>{contact.hours || t(theme, 'topbar.hours')}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <Link href="/rastreo" style={{ color: 'rgba(255,255,255,.66)' }}>{t(theme, 'topbar.track')}</Link>
+            <span style={{ opacity: 0.25 }}>|</span>
+            <Link href="/vendedor" style={{ color: 'rgba(255,255,255,.66)' }}>{t(theme, 'topbar.sell')}</Link>
+            <span style={{ opacity: 0.25 }}>|</span>
+            <span style={{ opacity: 0.7 }}>{t(theme, 'topbar.locale')}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Header sticky */}
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+          background: 'color-mix(in srgb, var(--color-bg) 94%, transparent)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid var(--color-border)',
+        }}
+      >
+        <div style={{ ...CONTAINER, display: 'flex', alignItems: 'center', gap: 14, paddingTop: 14, paddingBottom: 14, flexWrap: 'wrap' }}>
+          {/* Logo */}
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, textDecoration: 'none' }}>
+            {(() => {
+              const brand2 = theme.tokens.branding ?? {};
+              const logoLight = brand2.logoLight ?? settings.logo;
+              const logoDark = brand2.logoDark ?? null;
+              // OJO: sin `display` inline. La conmutación claro/oscuro se hace por
+              // CSS (.brand-swap .brand-logo-*), y un `display:block` inline la
+              // anularía (los estilos inline ganan a las clases) → saldrían las dos.
+              const imgStyle: React.CSSProperties = { objectFit: 'contain', height: 46, width: 'auto' };
+              if (logoLight && logoDark) {
+                // Ambas variantes: se intercambian por esquema de color (CSS).
+                return (
+                  <span className="brand-swap" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img className="brand-logo-light" src={logoLight} alt={brand} style={imgStyle} />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img className="brand-logo-dark" src={logoDark} alt={brand} style={imgStyle} />
+                  </span>
+                );
+              }
+              if (logoLight || logoDark) {
+                // eslint-disable-next-line @next/next/no-img-element
+                return <img src={(logoLight ?? logoDark) as string} alt={brand} style={imgStyle} />;
+              }
+              return null;
+            })() ?? (
+              <>
+                <span
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--color-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 10px 22px -12px color-mix(in srgb, var(--color-primary) 90%, transparent)',
+                    color: 'var(--color-primary-fg)',
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '23px',
+                  }}
+                >
+                  {brand.charAt(0).toUpperCase()}
+                </span>
+                <span style={{ lineHeight: 1 }}>
+                  <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: '21px', color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '-.01em' }}>
+                    {brand}
+                  </span>
+                  <span style={{ display: 'block', fontSize: '9.5px', letterSpacing: '.24em', color: 'var(--grey)', marginTop: 3, fontWeight: 600, textTransform: 'uppercase' }}>
+                    {t(theme, 'site.tagline')}
+                  </span>
+                </span>
+              </>
             )}
           </Link>
 
-          <form action="/productos" method="get" className="flex-1 min-w-56 max-w-xl">
-            <input
-              type="search"
-              name="q"
-              placeholder={t(theme, 'catalog.search.placeholder')}
-              aria-label={t(theme, 'catalog.search.placeholder')}
-              className="w-full font-body text-(length:--text-sm) text-ink bg-panel border-0 rounded-full px-5 py-2.5"
-            />
-          </form>
+          {/* Navegación (resalta el activo por ruta) */}
+          <MainNav
+            items={[
+              { href: '/', label: t(theme, 'nav.home') },
+              { href: '/productos', label: t(theme, 'nav.products') },
+              { href: '/categorias', label: t(theme, 'nav.categories') },
+              { href: '/quienes-somos', label: t(theme, 'nav.about') },
+              { href: '/blog', label: t(theme, 'nav.blog') },
+              { href: '/contacto', label: t(theme, 'nav.contact') },
+            ]}
+          />
 
-          <div className="hidden md:flex items-center gap-5 text-(length:--text-sm) font-semibold tracking-wide">
-            {settings.phone ? (
-              <a href={`tel:${settings.phone.replace(/\s+/g, '')}`} className="text-white no-underline hover:underline">
-                ✆ {settings.phone}
-              </a>
-            ) : null}
-            {settings.email ? (
-              <a href={`mailto:${settings.email}`} className="text-white no-underline hover:underline uppercase">
-                ✉ {settings.email}
-              </a>
-            ) : null}
-          </div>
+          {/* Acciones */}
+          <ThemeToggle />
+          <HeaderActions
+            labels={{
+              search: t(theme, 'nav.search'),
+              wishlist: t(theme, 'nav.wishlist'),
+              cart: t(theme, 'nav.cart'),
+              login: t(theme, 'nav.login'),
+              register: t(theme, 'nav.register'),
+              logout: t(theme, 'auth.logout'),
+              greeting: t(theme, 'auth.greeting'),
+              searchPlaceholder: t(theme, 'catalog.search.placeholder'),
+            }}
+          />
         </div>
-      </div>
-
-      {/* Fila de navegación */}
-      <div className="bg-panel border-b border-line">
-        <div className="max-w-[1160px] mx-auto px-4 py-2 flex items-center gap-6 flex-wrap">
-          {/* Dropdown de categorías (nativo, sin JS) */}
-          <details className="relative">
-            <summary className="cursor-pointer list-none font-semibold text-(length:--text-sm) tracking-wide uppercase text-ink flex items-center gap-2">
-              ☰ {t(theme, 'nav.categories')} ▾
-            </summary>
-            <div className="absolute left-0 top-full mt-2 z-20 bg-panel border border-line rounded-(--radius-md) shadow-lg min-w-56 py-2">
-              {categories.map((c) => (
-                <Link
-                  key={c.id}
-                  href={`/productos?categoria=${c.slug}`}
-                  className="block px-4 py-2 text-(length:--text-sm) text-ink no-underline hover:bg-page"
-                >
-                  {c.name} <span className="text-ink-muted">({c.productCount})</span>
-                </Link>
-              ))}
-            </div>
-          </details>
-
-          <nav className="flex items-center gap-5 flex-wrap text-(length:--text-sm) font-semibold tracking-wide uppercase">
-            <Link href="/" className="text-ink no-underline hover:text-brand">{t(theme, 'nav.home')}</Link>
-            <Link href="/productos" className="text-ink no-underline hover:text-brand">{t(theme, 'nav.products')}</Link>
-            <Link href="/vendedores" className="text-ink no-underline hover:text-brand">{t(theme, 'nav.vendors')}</Link>
-            <Link href="/rastreo" className="text-ink no-underline hover:text-brand">{t(theme, 'nav.track')}</Link>
-            <Link href="/blog" className="text-ink no-underline hover:text-brand">{t(theme, 'nav.blog')}</Link>
-            <Link href="/contacto" className="text-ink no-underline hover:text-brand">{t(theme, 'nav.contact')}</Link>
-            <Link href="/quienes-somos" className="text-ink no-underline hover:text-brand">{t(theme, 'nav.about')}</Link>
-          </nav>
-
-          <div className="ml-auto">
-            <HeaderActions
-              labels={{
-                cart: t(theme, 'nav.cart'),
-                login: t(theme, 'nav.login'),
-                logout: t(theme, 'auth.logout'),
-                greeting: t(theme, 'auth.greeting'),
-              }}
-            />
-          </div>
-        </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }
 
 export function SiteFooter({ theme }: { theme: Theme }) {
+  const brand = t(theme, 'site.name');
+  const year = new Date().getFullYear();
+  // El footer es siempre oscuro (--color-secondary) → logo para fondo oscuro (blanco).
+  const b = theme.tokens.branding ?? {};
+  const footerLogo = b.logoDark || b.logoLight || b.logoAlt || null;
+
+  // Contenido del footer (editable en Diseño → Footer).
+  const f = theme.tokens.footer ?? defaultTheme.tokens.footer;
+  const columns = f.columns;
+  const copyright = f.copyright.trim() || `© ${year} ${brand}. ${t(theme, 'footer.rights')}.`;
+
+  const linkStyle: React.CSSProperties = { color: 'rgba(255,255,255,.66)', textDecoration: 'none', fontSize: '13.5px', fontWeight: 300 };
+
   return (
-    <footer className="bg-second mt-12">
-      <div className="max-w-[1160px] mx-auto px-6 py-8 grid gap-6 text-center">
-        <div className="[&_strong]:text-white [&_p]:text-white/80">
-          <Newsletter
+    <footer style={{ background: 'var(--color-secondary)', color: 'rgba(255,255,255,.66)', marginTop: 40 }}>
+      <div style={{ ...CONTAINER, paddingTop: 64 }}>
+        {f.showNewsletter ? (
+          <FooterNewsletter
             labels={{
-              title: t(theme, 'newsletter.title'),
+              title: f.newsletterTitle,
+              subtitle: f.newsletterSubtitle,
               placeholder: t(theme, 'newsletter.placeholder'),
               submit: t(theme, 'newsletter.submit'),
               success: t(theme, 'newsletter.success'),
               error: t(theme, 'newsletter.error'),
             }}
           />
+        ) : null}
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: 40,
+            paddingBottom: 48,
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 18 }}>
+              {footerLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={footerLogo} alt={brand} style={{ height: 42, width: 'auto', maxWidth: 240, objectFit: 'contain', display: 'block' }} />
+              ) : (
+                <>
+                  <span
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 'var(--radius-md)',
+                      background: 'var(--color-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--color-primary-fg)',
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '20px',
+                    }}
+                  >
+                    {brand.charAt(0).toUpperCase()}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '19px', color: '#fff', textTransform: 'uppercase' }}>{brand}</span>
+                </>
+              )}
+            </div>
+            <p style={{ fontSize: '13.5px', lineHeight: 1.6, maxWidth: 290, margin: '0 0 20px', fontWeight: 300 }}>{f.tagline}</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {f.social.map((s, i) => (
+                <a key={i} href={s.href || '#'} target={s.href ? '_blank' : undefined} rel={s.href ? 'noopener noreferrer' : undefined} aria-label={s.label} style={{ width: 38, height: 38, borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: 'inherit', textDecoration: 'none' }}>
+                  {s.label}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {columns.map((col) => (
+            <div key={col.title}>
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: '14px', marginBottom: 18 }}>{col.title}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {col.links.map((l, i) => (
+                  <Link key={`${l.label}-${i}`} href={l.href} style={linkStyle}>{l.label}</Link>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
-        <span className="text-white/70 text-(length:--text-sm)">
-          {t(theme, 'site.name')} © {new Date().getFullYear()} — {t(theme, 'footer.rights')}
-        </span>
+      </div>
+
+      <div style={{ borderTop: '1px solid rgba(255,255,255,.08)' }}>
+        <div style={{ ...CONTAINER, display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', paddingTop: 20, paddingBottom: 20, fontSize: '13px', opacity: 0.55, fontWeight: 300 }}>
+          <span>{copyright}</span>
+          <span style={{ display: 'flex', gap: 20 }}>
+            <Link href="/contacto" style={{ color: 'rgba(255,255,255,.55)' }}>{t(theme, 'footer.terms')}</Link>
+            <Link href="/contacto" style={{ color: 'rgba(255,255,255,.55)' }}>{t(theme, 'footer.privacy')}</Link>
+          </span>
+        </div>
       </div>
     </footer>
   );

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ADMIN_COOKIE, API_URL } from '@/lib/admin';
+import { ADMIN_COOKIE, ADMIN_REFRESH_COOKIE, API_URL } from '@/lib/admin';
 
 /**
  * Proxy del admin: login escribe la cookie httpOnly; el resto reenvía a
@@ -12,6 +12,7 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
   if (joined === 'logout') {
     const res = NextResponse.json({ ok: true });
     res.cookies.delete(ADMIN_COOKIE);
+    res.cookies.delete(ADMIN_REFRESH_COOKIE);
     return res;
   }
 
@@ -23,19 +24,25 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
     init.body = await req.blob();
   }
 
-  const apiRes = await fetch(`${API_URL}/admin/${joined}`, init);
+  // Reenviar el query string (?page, ?search, …); sin esto la paginación y la
+  // búsqueda del admin no llegaban a la API.
+  const search = req.nextUrl.search;
+  const apiRes = await fetch(`${API_URL}/admin/${joined}${search}`, init);
   const data = await apiRes.json().catch(() => null);
 
-  // Login exitoso → guardar cookie httpOnly
+  // Login exitoso → guardar cookies httpOnly (access + refresh)
   if (joined === 'auth/login' && apiRes.ok && data?.token) {
     const res = NextResponse.json({ admin: data.admin });
-    res.cookies.set(ADMIN_COOKIE, data.token, {
+    // El access token expira en minutos; el middleware lo renueva con el refresh.
+    const opts = {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: 'lax' as const,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
-    });
+    };
+    res.cookies.set(ADMIN_COOKIE, data.token, opts);
+    if (data.refresh_token) res.cookies.set(ADMIN_REFRESH_COOKIE, data.refresh_token, opts);
     return res;
   }
   return NextResponse.json(data, { status: apiRes.status });

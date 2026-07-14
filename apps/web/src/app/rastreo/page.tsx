@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import type { TrackingResult } from '@servmaq/types';
-import { Button, Input } from '@servmaq/ui';
+import type { TrackingResult } from '@maqserv/types';
+import { Button, Input } from '@maqserv/ui';
 import { getTheme, t } from '@/lib/theme';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 

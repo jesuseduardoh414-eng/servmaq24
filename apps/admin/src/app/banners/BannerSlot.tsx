@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card, Input } from '@servmaq/ui';
+import { Button, Card, Input } from '@maqserv/ui';
 
 export function BannerSlot({ slot, image, link }: { slot: string; image: string | null; link: string | null }) {
   const router = useRouter();

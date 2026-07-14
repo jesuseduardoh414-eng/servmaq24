@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card, Input } from '@servmaq/ui';
+import { Button, Card, Input } from '@maqserv/ui';
 
 export interface SectorData {
   id: number;

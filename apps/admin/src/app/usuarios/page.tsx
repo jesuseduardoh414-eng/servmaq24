@@ -24,7 +24,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
   );
 
   return (
-    <AdminShell adminName={admin.name}>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <div className="flex justify-between items-baseline flex-wrap gap-4 mb-5">
         <h1 className="font-head text-(length:--text-2xl)">Clientes ({data?.total ?? 0})</h1>
         <form action="/usuarios" method="get">

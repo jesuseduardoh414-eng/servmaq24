@@ -1,0 +1,140 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+/**
+ * Navegación del admin agrupada por secciones funcionales.
+ * (Hoy solo existe el rol superadmin: todos ven todo. Cuando haya roles,
+ * bastará con filtrar estos grupos/ítems según permisos.)
+ */
+type BadgeKey = 'orders' | 'quotes' | 'withdraws';
+type Item = { href: string; label: string; icon: string; badge?: BadgeKey };
+
+const GROUPS: Array<{ title: string; items: Item[] }> = [
+  { title: 'Panel', items: [{ href: '/', label: 'Inicio', icon: 'ph-house' }] },
+  {
+    title: 'Catálogo',
+    items: [
+      { href: '/productos', label: 'Productos', icon: 'ph-package' },
+      { href: '/categorias', label: 'Categorías', icon: 'ph-squares-four' },
+    ],
+  },
+  {
+    title: 'Ventas',
+    items: [
+      { href: '/ordenes', label: 'Órdenes', icon: 'ph-receipt', badge: 'orders' },
+      { href: '/cotizaciones', label: 'Cotizaciones', icon: 'ph-file-text', badge: 'quotes' },
+    ],
+  },
+  {
+    title: 'Marketplace',
+    items: [
+      { href: '/vendedores', label: 'Vendedores', icon: 'ph-storefront' },
+      { href: '/retiros', label: 'Retiros', icon: 'ph-hand-coins', badge: 'withdraws' },
+    ],
+  },
+  {
+    title: 'Clientes',
+    items: [
+      { href: '/usuarios', label: 'Clientes', icon: 'ph-users' },
+      { href: '/resenas', label: 'Reseñas', icon: 'ph-star' },
+      { href: '/preguntas', label: 'Preguntas', icon: 'ph-chats-circle' },
+      { href: '/suscriptores', label: 'Suscriptores', icon: 'ph-envelope-simple' },
+    ],
+  },
+  {
+    title: 'Diseño del sitio',
+    items: [
+      { href: '/diseno/marca', label: 'Identidad de marca', icon: 'ph-palette' },
+      { href: '/diseno/hero', label: 'Sección 1 · Hero', icon: 'ph-layout' },
+      { href: '/diseno/categorias', label: 'Sección 2 · Categorías', icon: 'ph-squares-four' },
+      { href: '/diseno/productos', label: 'Sección 3 · Productos', icon: 'ph-package' },
+      { href: '/diseno/quienes-somos', label: 'Sección 4 · Quiénes somos', icon: 'ph-shield-check' },
+      { href: '/diseno/sectores', label: 'Sección 5 · Sectores', icon: 'ph-buildings' },
+      { href: '/diseno/oferta', label: 'Sección 6 · Oferta', icon: 'ph-tag' },
+      { href: '/diseno/resenas', label: 'Sección 7 · Reseñas', icon: 'ph-star' },
+      { href: '/diseno/faq', label: 'Sección 8 · Preguntas frecuentes', icon: 'ph-question' },
+      { href: '/blog', label: 'Blog', icon: 'ph-article' },
+      { href: '/diseno/contacto', label: 'Contacto', icon: 'ph-address-book' },
+      { href: '/diseno/footer', label: 'Footer', icon: 'ph-rows' },
+      { href: '/temas', label: 'Temas y colores', icon: 'ph-swatches' },
+    ],
+  },
+  {
+    title: 'Configuración',
+    items: [
+      { href: '/admins', label: 'Administradores', icon: 'ph-user-gear' },
+      { href: '/ajustes', label: 'Ajustes', icon: 'ph-gear' },
+    ],
+  },
+];
+
+function isActive(pathname: string, href: string): boolean {
+  if (href === '/') return pathname === '/';
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+type Badges = Record<BadgeKey, number>;
+
+export function SidebarNav({ collapsed, query }: { collapsed: boolean; query: string }) {
+  const pathname = usePathname() || '/';
+  const [badges, setBadges] = useState<Badges>({ orders: 0, quotes: 0, withdraws: 0 });
+
+  // Contadores en vivo (pendientes) desde el resumen del panel.
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/admin/dashboard')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!alive || !d) return;
+        setBadges({
+          orders: d.pendingOrders ?? 0,
+          quotes: d.pendingQuotes ?? 0,
+          withdraws: d.withdrawsPending ?? 0,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const q = query.trim().toLowerCase();
+  const showLabels = !collapsed;
+  const groups = GROUPS.map((g) => ({
+    ...g,
+    items: q ? g.items.filter((it) => it.label.toLowerCase().includes(q)) : g.items,
+  })).filter((g) => g.items.length > 0);
+
+  return (
+    <nav className="adm-nav">
+      {groups.map((g) => (
+        <div className="adm-nav-group" key={g.title}>
+          {showLabels ? <div className="adm-group-title">{g.title}</div> : null}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {g.items.map((it) => {
+              const active = isActive(pathname, it.href);
+              const count = it.badge ? badges[it.badge] : 0;
+              return (
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  className={`adm-navlink${active ? ' active' : ''}`}
+                  title={it.label}
+                >
+                  {active ? <span className="adm-active-bar" /> : null}
+                  <i className={`ph ${it.icon} adm-navico`} aria-hidden />
+                  {showLabels ? <span className="adm-navlabel">{it.label}</span> : null}
+                  {showLabels && count > 0 ? <span className="adm-badge">{count}</span> : null}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      {groups.length === 0 ? <div className="adm-nav-empty">Sin resultados</div> : null}
+    </nav>
+  );
+}

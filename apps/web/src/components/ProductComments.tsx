@@ -1,9 +1,4 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Button, Card, Input } from '@servmaq/ui';
-import type { ProductComment, ProductCommentsSummary } from '@servmaq/types';
+import type { ProductComment, ProductCommentsSummary } from '@maqserv/types';
 
 function Stars({ value, size = 'var(--text-base)' }: { value: number; size?: string }) {
   const full = Math.round(value);
@@ -15,81 +10,21 @@ function Stars({ value, size = 'var(--text-base)' }: { value: number; size?: str
   );
 }
 
-/** Selector de calificación accesible (radios visualmente como estrellas). */
-function RatingPicker({ value, onChange, label }: { value: number; onChange: (n: number) => void; label: string }) {
-  return (
-    <fieldset style={{ border: 'none', padding: 0, margin: 0, display: 'flex', gap: '.4rem', alignItems: 'center' }}>
-      <legend style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', padding: 0, marginRight: '.4rem' }}>{label}</legend>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <label key={n} style={{ cursor: 'pointer', fontSize: 'var(--text-xl)', color: n <= value ? 'var(--color-warning)' : 'var(--color-border)' }}>
-          <input
-            type="radio"
-            name="rating"
-            value={n}
-            checked={value === n}
-            onChange={() => onChange(n)}
-            style={{ position: 'absolute', opacity: 0, width: 1, height: 1 }}
-          />
-          ★
-        </label>
-      ))}
-    </fieldset>
-  );
-}
-
+/**
+ * Opiniones del producto — SOLO LECTURA. Las reseñas se dejan desde "Mis compras"
+ * (ligadas a una compra verificada); aquí solo se muestran las aprobadas.
+ */
 export function ProductComments({
-  productId,
   initial,
   labels,
 }: {
   productId: number;
   initial: ProductCommentsSummary;
-  labels: {
-    title: string;
-    empty: string;
-    formTitle: string;
-    rating: string;
-    text: string;
-    submit: string;
-    loginToComment: string;
-  };
+  labels: { title: string; empty: string; [k: string]: string };
 }) {
-  const [items, setItems] = useState<ProductComment[]>(initial.items);
-  const [rating, setRating] = useState(5);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  // Sesión en cliente para que la página de producto siga siendo cacheable
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  useEffect(() => {
-    fetch('/api/auth/session')
-      .then((r) => r.json())
-      .then((d) => setIsLoggedIn(Boolean(d.user)))
-      .catch(() => setIsLoggedIn(false));
-  }, []);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    const form = new FormData(e.currentTarget);
-    const res = await fetch(`/api/proxy/catalog/products/${productId}/comments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: String(form.get('text') ?? ''), rating }),
-    });
-    const data = await res.json().catch(() => null);
-    setLoading(false);
-    if (!res.ok || !data?.id) {
-      setError(typeof data?.message === 'string' ? data.message : 'No pudimos publicar tu opinión');
-      return;
-    }
-    setItems((prev) => [data as ProductComment, ...prev]);
-    (e.target as HTMLFormElement).reset();
-    setRating(5);
-  }
-
-  const count = items.length;
-  const average = count === 0 ? 0 : Math.round((items.reduce((s, i) => s + i.rating, 0) / count) * 10) / 10;
+  const items: ProductComment[] = initial.items;
+  const count = initial.count;
+  const average = initial.average;
 
   return (
     <section style={{ display: 'grid', gap: '1rem' }}>
@@ -110,31 +45,23 @@ export function ProductComments({
       ) : (
         <div style={{ display: 'grid', gap: '.7rem' }}>
           {items.map((c) => (
-            <Card key={c.id} style={{ display: 'grid', gap: '.3rem', padding: '.9rem 1.1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                <strong>{c.author}</strong>
+            <article key={c.id} style={{ display: 'grid', gap: '.35rem', padding: '.9rem 1.1rem', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '.6rem', flexWrap: 'wrap' }}>
+                  <strong>{c.author}</strong>
+                  {c.verified ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '11.5px', fontWeight: 700, color: 'var(--color-success)', background: 'color-mix(in srgb, var(--color-success) 14%, transparent)', padding: '2px 8px', borderRadius: 999 }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      Compra verificada
+                    </span>
+                  ) : null}
+                </span>
                 <Stars value={c.rating} size="var(--text-sm)" />
               </div>
-              <p style={{ margin: 0, fontSize: 'var(--text-sm)', lineHeight: 1.6 }}>{c.text}</p>
-            </Card>
+              <p style={{ margin: 0, fontSize: 'var(--text-sm)', lineHeight: 1.6, color: 'var(--color-text)' }}>{c.text}</p>
+            </article>
           ))}
         </div>
-      )}
-
-      {isLoggedIn ? (
-        <form onSubmit={onSubmit} style={{ display: 'grid', gap: '.7rem' }}>
-          <h3 style={{ fontSize: 'var(--text-lg)', margin: 0 }}>{labels.formTitle}</h3>
-          <RatingPicker value={rating} onChange={setRating} label={labels.rating} />
-          <Input name="text" required minLength={3} maxLength={2000} placeholder={labels.text} aria-label={labels.text} />
-          {error ? (
-            <p role="alert" style={{ color: 'var(--color-error)', margin: 0, fontSize: 'var(--text-sm)' }}>{error}</p>
-          ) : null}
-          <div><Button type="submit" disabled={loading}>{labels.submit}</Button></div>
-        </form>
-      ) : (
-        <Link href="/login" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>
-          {labels.loginToComment}
-        </Link>
       )}
     </section>
   );

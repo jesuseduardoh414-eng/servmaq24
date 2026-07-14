@@ -1,5 +1,5 @@
 {
-  "name": "@servmaq/types",
+  "name": "@maqserv/types",
   "version": "0.1.0",
   "private": true,
   "description": "DTOs compartidos front↔back. La API responde exactamente estas formas; el front consume exactamente estas formas.",

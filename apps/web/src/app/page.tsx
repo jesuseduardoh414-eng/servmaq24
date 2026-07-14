@@ -1,14 +1,16 @@
 import type { ReactNode } from 'react';
-import type { Theme } from '@servmaq/config';
+import type { Theme } from '@maqserv/config';
 import { getTheme } from '@/lib/theme';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 import {
   BannersSection,
   BlogSection,
+  BrandsSection,
   CategoriesSection,
   FaqSection,
   FeaturedSection,
   Hero,
+  OfferSection,
   ReviewsSection,
   SectorsSection,
   SuccessCasesSection,
@@ -27,6 +29,8 @@ const SECTIONS: Record<string, (props: { theme: Theme }) => Promise<ReactNode> |
   'home.featured-products': FeaturedSection,
   'home.strategic-sectors': SectorsSection,
   'home.why-choose-us': WhyChooseUsSection,
+  'home.offer': OfferSection,
+  'home.brands': BrandsSection,
   'home.services': ServicesSection,
   'home.banners': BannersSection,
   'home.blog': BlogSection,

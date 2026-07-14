@@ -1,6 +1,6 @@
 import { Controller, Get, Module } from '@nestjs/common';
-import { prisma } from '@servmaq/db';
-import type { SiteSettings } from '@servmaq/types';
+import { prisma } from '@maqserv/db';
+import type { SiteSettings } from '@maqserv/types';
 import { imageUrl } from '../catalog/images';
 
 @Controller('settings')

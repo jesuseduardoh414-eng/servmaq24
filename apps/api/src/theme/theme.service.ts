@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { prisma } from '@servmaq/db';
-import { themeSchema, type Theme } from '@servmaq/config';
+import { prisma } from '@maqserv/db';
+import { themeSchema, type Theme } from '@maqserv/config';
 
 @Injectable()
 export class ThemeService {

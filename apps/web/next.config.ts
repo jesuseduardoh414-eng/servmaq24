@@ -1,14 +1,15 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // @servmaq/ui se consume como fuente TS; Next lo transpila
-  transpilePackages: ['@servmaq/ui'],
+  // @maqserv/ui se consume como fuente TS; Next lo transpila
+  transpilePackages: ['@maqserv/ui'],
   images: {
     remotePatterns: [
-      // Las fotos legacy viven en el sitio Laravel de producción hasta migrar
-      // los assets (F4). Base configurable vía IMAGE_BASE_URL en la API.
+      // Assets migrados a Supabase Storage (bucket público `media`).
+      { protocol: 'https', hostname: 'kxewnuotuolwloccusqx.supabase.co', pathname: '/storage/v1/object/public/media/**' },
+      // Legacy (por si queda alguna URL de scava.website sin migrar).
       { protocol: 'https', hostname: 'scava.website' },
-      // Subidas nuevas servidas por la API (dev; en prod añadir su dominio)
+      // Subidas nuevas servidas por la API (dev; en prod añadir su dominio).
       { protocol: 'http', hostname: 'localhost', port: '4000' },
     ],
   },

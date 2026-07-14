@@ -1,66 +1,140 @@
-import Link from 'next/link';
-import type { ReactNode } from 'react';
-import { LogoutButton } from './LogoutButton';
+'use client';
 
-const NAV = [
-  { href: '/', label: 'Inicio' },
-  { href: '/productos', label: 'Productos' },
-  { href: '/categorias', label: 'Categorías' },
-  { href: '/ordenes', label: 'Órdenes' },
-  { href: '/cotizaciones', label: 'Cotizaciones' },
-  { href: '/vendedores', label: 'Vendedores' },
-  { href: '/retiros', label: 'Retiros' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/faqs', label: 'FAQ' },
-  { href: '/contenido', label: 'Contenido' },
-  { href: '/sectores', label: 'Sectores' },
-  { href: '/banners', label: 'Banners' },
-  { href: '/usuarios', label: 'Clientes' },
-  { href: '/resenas', label: 'Reseñas' },
-  { href: '/suscriptores', label: 'Suscriptores' },
-  { href: '/admins', label: 'Administradores' },
-  { href: '/ajustes', label: 'Ajustes' },
-  { href: '/temas', label: 'Temas / Diseño' },
-];
+import { useEffect, useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { SidebarNav } from './SidebarNav';
+import { useBranding } from './branding';
 
-export function AdminShell({ adminName, children }: { adminName: string; children: ReactNode }) {
+const COLLAPSE_KEY = 'maqserv_admin_sidebar_collapsed';
+
+/**
+ * Cromo del panel admin: sidebar colapsable + topbar con búsqueda (filtra el
+ * menú) + perfil con cierre de sesión. Diseño "Panel MaqServ24".
+ */
+export function AdminShell({
+  adminName,
+  adminEmail,
+  children,
+}: {
+  adminName: string;
+  adminEmail?: string;
+  children: ReactNode;
+}) {
+  const router = useRouter();
+  const branding = useBranding();
+  const [collapsed, setCollapsed] = useState(false);
+  const [query, setQuery] = useState('');
+
+  // El sidebar es oscuro → preferimos la variante para fondo oscuro (logoDark).
+  // Colapsado usamos el isotipo cuadrado si existe.
+  const fullLogo = branding.logoDark || branding.logoLight || branding.logoAlt || null;
+  const brandImg = collapsed ? branding.icon || fullLogo : fullLogo;
+
+  // Recupera la preferencia de colapso tras montar (evita mismatch de hidratación).
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(COLLAPSE_KEY) === '1') setCollapsed(true);
+    } catch {
+      /* sin localStorage: se queda expandido */
+    }
+  }, []);
+
+  function toggleCollapse() {
+    setCollapsed((c) => {
+      const next = !c;
+      try {
+        localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0');
+      } catch {
+        /* noop */
+      }
+      return next;
+    });
+  }
+
+  async function logout() {
+    await fetch('/api/admin/logout', { method: 'POST' });
+    router.push('/login');
+    router.refresh();
+  }
+
+  const initial = (adminName?.trim()?.[0] ?? 'A').toUpperCase();
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', minHeight: '100vh' }}>
-      <aside
-        style={{
-          background: 'var(--color-surface)',
-          borderRight: '1px solid var(--color-border)',
-          padding: '1.2rem .9rem',
-          display: 'grid',
-          gap: '.3rem',
-          alignContent: 'start',
-        }}
-      >
-        <strong style={{ fontSize: 'var(--text-lg)', padding: '.3rem .6rem', marginBottom: '.6rem' }}>
-          ServMaq24 <span style={{ color: 'var(--color-accent)', fontSize: 'var(--text-sm)' }}>admin</span>
-        </strong>
-        {NAV.map((n) => (
-          <Link
-            key={n.href}
-            href={n.href}
-            style={{
-              textDecoration: 'none',
-              color: 'var(--color-text)',
-              padding: '.45rem .6rem',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-            }}
-          >
-            {n.label}
-          </Link>
-        ))}
-        <div style={{ marginTop: '1rem', borderTop: '1px solid var(--color-border)', paddingTop: '.8rem', display: 'grid', gap: '.4rem' }}>
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', padding: '0 .6rem' }}>{adminName}</span>
-          <LogoutButton />
+    <div className={`adm-shell${collapsed ? ' is-collapsed' : ''}`}>
+      {/* SIDEBAR */}
+      <aside className="adm-sidebar">
+        <div className="adm-brand">
+          {brandImg ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              className={`adm-brand-img${collapsed ? ' is-square' : ''}`}
+              src={brandImg}
+              alt="MaqServ24 · Panel admin"
+            />
+          ) : (
+            <>
+              <div className="adm-logo">
+                <i className="ph-bold ph-lightning" aria-hidden />
+              </div>
+              <div className="adm-brand-text">
+                <span className="adm-brand-name">MaqServ24</span>
+                <span className="adm-brand-sub">Panel admin</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        <SidebarNav collapsed={collapsed} query={query} />
+
+        <div className="adm-profile-wrap">
+          <button className="adm-profile" onClick={logout} title="Cerrar sesión" type="button">
+            <span className="adm-avatar">{initial}</span>
+            <span className="adm-profile-text">
+              <span className="adm-profile-name">{adminName}</span>
+              <span className="adm-profile-mail">{adminEmail ?? 'Administrador'}</span>
+            </span>
+            <i className="ph ph-sign-out adm-profile-signout" aria-hidden />
+          </button>
         </div>
       </aside>
-      <main style={{ padding: '1.6rem 2rem', maxWidth: 1100 }}>{children}</main>
+
+      {/* MAIN */}
+      <main className="adm-main">
+        <header className="adm-topbar">
+          <button
+            className="adm-iconbtn sm"
+            onClick={toggleCollapse}
+            title={collapsed ? 'Expandir menú' : 'Contraer menú'}
+            aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'}
+            type="button"
+          >
+            <i className="ph ph-sidebar-simple" aria-hidden />
+          </button>
+
+          <div className="adm-topbar-search">
+            <i className="ph ph-magnifying-glass" aria-hidden />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar en el panel…"
+              aria-label="Buscar en el panel"
+            />
+          </div>
+
+          <div className="adm-topbar-spacer" />
+
+          <button className="adm-iconbtn" title="Notificaciones" aria-label="Notificaciones" type="button">
+            <i className="ph ph-bell" aria-hidden />
+            <span className="adm-notif-dot" />
+          </button>
+          <div className="adm-topbar-divider" />
+          <span className="adm-avatar" aria-hidden>{initial}</span>
+        </header>
+
+        <div className="adm-content">
+          <div className="adm-content-inner">{children}</div>
+        </div>
+      </main>
     </div>
   );
 }

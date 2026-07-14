@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Patch, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { z } from 'zod';
 import * as bcrypt from 'bcryptjs';
-import { prisma } from '@servmaq/db';
+import { prisma } from '@maqserv/db';
 import { JwtGuard, type AuthedRequest } from '../auth/jwt.guard';
 
 const profileSchema = z.object({

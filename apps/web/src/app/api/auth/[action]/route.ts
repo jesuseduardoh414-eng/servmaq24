@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SESSION_COOKIE } from '@/lib/session';
+import { SESSION_COOKIE, REFRESH_COOKIE } from '@/lib/session';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ action: st
   if (action === 'logout') {
     const res = NextResponse.json({ ok: true });
     res.cookies.delete(SESSION_COOKIE);
+    res.cookies.delete(REFRESH_COOKIE);
     return res;
   }
 
@@ -56,12 +57,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ action: st
   }
 
   const res = NextResponse.json({ user: data.user });
-  res.cookies.set(SESSION_COOKIE, data.token, {
+  // La cookie vive 7 días, pero el access token de Supabase expira en minutos;
+  // el middleware lo renueva con el refresh token antes de que caduque.
+  const opts = {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 7, // igual que la expiración del JWT
+    maxAge: 60 * 60 * 24 * 7,
     path: '/',
-  });
+  };
+  res.cookies.set(SESSION_COOKIE, data.token, opts);
+  if (data.refresh_token) res.cookies.set(REFRESH_COOKIE, data.refresh_token, opts);
   return res;
 }

@@ -20,7 +20,7 @@ export default async function AdminWithdraws() {
   const rows = (await adminFetch<WithdrawRow[]>('/admin/withdraws')) ?? [];
 
   return (
-    <AdminShell adminName={admin.name}>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: '1.2rem' }}>Retiros</h1>
       <Table headers={['Vendedor', 'Monto', 'Método', 'Referencia', 'Estado', 'Acciones']}>
         {rows.map((w) => (

@@ -19,7 +19,7 @@ export default async function AdminAdmins() {
   const admins = (await adminFetch<AdminRow[]>('/admin/admins')) ?? [];
 
   return (
-    <AdminShell adminName={admin.name}>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <h1 className="font-head text-(length:--text-2xl) mb-5">Administradores</h1>
       <div className="grid gap-4 max-w-3xl">
         <AdminCreate />

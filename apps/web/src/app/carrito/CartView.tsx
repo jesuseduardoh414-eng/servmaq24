@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Button, Card } from '@servmaq/ui';
+import { Button, Card } from '@maqserv/ui';
 import { cartLineTotal, useCart } from '@/components/CartProvider';
 import { formatPrice } from '@/lib/format';
 

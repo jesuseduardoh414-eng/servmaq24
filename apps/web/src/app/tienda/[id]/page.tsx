@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import type { Paginated, ProductCard as ProductCardDto, VendorPublic } from '@servmaq/types';
+import type { Paginated, ProductCard as ProductCardDto, VendorPublic } from '@maqserv/types';
 import { getTheme, t } from '@/lib/theme';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 import { ProductCard } from '@/components/ProductCard';

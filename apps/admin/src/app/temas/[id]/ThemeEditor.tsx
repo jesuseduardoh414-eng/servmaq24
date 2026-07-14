@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Card, Input } from '@servmaq/ui';
-import type { Copys, Palette, ThemeTokens } from '@servmaq/config';
+import { Button, Card, Input } from '@maqserv/ui';
+import type { Copys, Palette, ThemeTokens } from '@maqserv/config';
 
 /** Contraste WCAG (luminancia relativa). AA texto normal: ≥ 4.5. */
 function contrast(hex1: string, hex2: string): number {
@@ -37,6 +38,35 @@ const PALETTE_LABELS: Record<keyof Palette, string> = {
   success: 'Éxito',
   warning: 'Advertencia',
   error: 'Error',
+};
+
+/**
+ * Metadatos de cada sección del Home para el "Constructor": nombre amigable
+ * y recomendación de qué conviene poner (cada giro llena secciones distinto).
+ * Las claves coinciden con theme.tokens.sections[].key.
+ */
+type SectionMeta = { name: string; recommendation: string };
+const SECTION_META: Record<string, SectionMeta> = {
+  'home.hero': { name: 'Hero / Portada', recommendation: 'La primera impresión: título grande, subtítulo, botones y distintivos de confianza. Recomendada para todos los giros.' },
+  'home.categories': { name: 'Categorías', recommendation: 'Carrusel de categorías o departamentos. Recomendada si manejas un catálogo variado.' },
+  'home.featured-products': { name: 'Productos destacados', recommendation: 'Rejilla de productos con filtros por categoría. Ideal para tiendas o renta con catálogo.' },
+  'home.why-choose-us': { name: 'Por qué elegirnos', recommendation: 'Tus ventajas y valores. Genera confianza en cualquier giro.' },
+  'home.strategic-sectors': { name: 'Sectores / Industrias', recommendation: 'Industrias o casos de uso que atiendes. Útil para negocios B2B o de servicios.' },
+  'home.offer': { name: 'Oferta / Promoción', recommendation: 'Banner de promoción con botón. Para campañas, descuentos o lanzamientos.' },
+  'home.reviews': { name: 'Reseñas / Testimonios', recommendation: 'Opiniones de clientes reales. Recomendada como prueba social.' },
+  'home.brands': { name: 'Marcas', recommendation: 'Logos de marcas con las que trabajas. Para distribuidores o aliados.' },
+  'home.faq': { name: 'Preguntas frecuentes', recommendation: 'Resuelve dudas comunes. Reduce fricción en cualquier giro.' },
+  'home.services': { name: 'Servicios', recommendation: 'Los servicios que ofreces. Para negocios de servicios más que de producto.' },
+  'home.banners': { name: 'Banners', recommendation: 'Imágenes promocionales enlazables. Para campañas visuales.' },
+  'home.blog': { name: 'Blog / Noticias', recommendation: 'Artículos recientes. Si generas contenido o buscas SEO.' },
+  'home.success-cases': { name: 'Casos de éxito', recommendation: 'Proyectos o trabajos realizados. Ideal como portafolio.' },
+};
+
+/** Secciones con página de edición dedicada (se irán sumando: 2, 3, …). */
+const SECTION_EDITOR_HREF: Record<string, string> = { 'home.hero': '/diseno/hero', 'home.categories': '/diseno/categorias' };
+
+const UPPER_LABEL: React.CSSProperties = {
+  fontSize: '11px', fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--color-text-muted)',
 };
 
 function PaletteEditor({
@@ -248,20 +278,97 @@ export function ThemeEditor({
           </label>
         </Card>
 
-        <Card style={{ display: 'grid', gap: '.5rem' }}>
-          <strong>Secciones de la home (orden y visibilidad)</strong>
-          {[...tokens.sections].sort((a, b) => a.order - b.order).map((s, i, arr) => (
-            <div key={s.key} style={{ display: 'flex', gap: '.6rem', alignItems: 'center', fontSize: 'var(--text-sm)' }}>
-              <input type="checkbox" checked={s.enabled} onChange={(e) => setSection(s.key, { enabled: e.target.checked })} />
-              <code style={{ flex: 1, color: s.enabled ? 'var(--color-text)' : 'var(--color-text-muted)' }}>{s.key}</code>
-              <Button size="sm" variant="ghost" onClick={() => moveSection(s.key, -1)} disabled={i === 0} aria-label="Subir">↑</Button>
-              <Button size="sm" variant="ghost" onClick={() => moveSection(s.key, 1)} disabled={i === arr.length - 1} aria-label="Bajar">↓</Button>
+        <Card style={{ display: 'grid', gap: '.8rem' }}>
+          <div>
+            <strong>Constructor del Home</strong>
+            <p style={{ margin: '.25rem 0 0', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', lineHeight: 1.45 }}>
+              Cada bloque de la página de inicio, en orden. Actívalo, muévelo y —según la sección— configúralo aquí mismo.
+              Como cada giro es distinto, la <em>recomendación</em> te dice qué conviene poner en cada sección.
+            </p>
+          </div>
+
+          {/* Página: Home (las secciones van indentadas debajo) */}
+          <div style={{ display: 'grid', gap: '.5rem' }}>
+            <span style={{ ...UPPER_LABEL, color: 'var(--color-text)' }}>▾ Página: Home</span>
+            <div style={{ display: 'grid', gap: '.6rem', paddingLeft: '.9rem', borderLeft: '2px solid var(--color-border)' }}>
+              {[...tokens.sections].sort((a, b) => a.order - b.order).map((s, i, arr) => {
+                const meta = SECTION_META[s.key] ?? { name: s.key, recommendation: '' };
+                const editorHref = SECTION_EDITOR_HREF[s.key];
+                return (
+                  <div
+                    key={s.key}
+                    style={{
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      background: s.enabled ? 'var(--color-surface)' : 'color-mix(in srgb, var(--color-text) 4%, transparent)',
+                      opacity: s.enabled ? 1 : 0.75,
+                      padding: '.7rem .8rem',
+                      display: 'grid',
+                      gap: '.5rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '.7rem', alignItems: 'flex-start' }}>
+                      <span
+                        aria-hidden
+                        style={{
+                          flexShrink: 0, width: 26, height: 26, borderRadius: '50%',
+                          background: s.enabled ? 'var(--color-primary)' : 'var(--color-border)',
+                          color: s.enabled ? 'var(--color-primary-fg)' : 'var(--color-text-muted)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 'var(--text-sm)',
+                        }}
+                      >
+                        {i + 1}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap' }}>
+                          <strong style={{ fontSize: 'var(--text-base)' }}>Sección {i + 1} · {meta.name}</strong>
+                          {!s.enabled ? (
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', borderRadius: '999px', padding: '1px 8px' }}>Oculta</span>
+                          ) : null}
+                        </div>
+                        {meta.recommendation ? (
+                          <p style={{ margin: '.3rem 0 0', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', lineHeight: 1.4 }}>💡 {meta.recommendation}</p>
+                        ) : null}
+                      </div>
+                      <div style={{ display: 'flex', gap: '.2rem', alignItems: 'center', flexShrink: 0 }}>
+                        <label title={s.enabled ? 'Ocultar sección' : 'Mostrar sección'} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                          <input type="checkbox" checked={s.enabled} onChange={(e) => setSection(s.key, { enabled: e.target.checked })} aria-label={`Mostrar ${meta.name}`} />
+                        </label>
+                        <Button size="sm" variant="ghost" onClick={() => moveSection(s.key, -1)} disabled={i === 0} aria-label="Subir">↑</Button>
+                        <Button size="sm" variant="ghost" onClick={() => moveSection(s.key, 1)} disabled={i === arr.length - 1} aria-label="Bajar">↓</Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      {editorHref ? (
+                        <Link
+                          href={editorHref}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '.4rem', textDecoration: 'none',
+                            color: 'var(--color-primary-fg)', background: 'var(--color-primary)', fontWeight: 700,
+                            fontSize: 'var(--text-sm)', padding: '.4em .9em', borderRadius: 'var(--radius-button)',
+                          }}
+                        >
+                          ⚙ Configurar contenido →
+                        </Link>
+                      ) : (
+                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Configuración detallada próximamente</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          </div>
         </Card>
 
         <Card style={{ display: 'grid', gap: '.5rem' }}>
-          <strong>Textos del sitio (es)</strong>
+          <div>
+            <strong>Todos los textos del sitio (avanzado)</strong>
+            <p style={{ margin: '.25rem 0 0', color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+              Lista completa por clave. Para el Home usa mejor el <em>Constructor</em> de arriba; esto es el respaldo para textos que aún no tienen editor por sección.
+            </p>
+          </div>
           <div style={{ display: 'grid', gap: '.4rem', maxHeight: 420, overflowY: 'auto', paddingRight: '.4rem' }}>
             {copyKeys.map((key) => (
               <label key={key} style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '.6rem', alignItems: 'center', fontSize: 'var(--text-sm)' }}>

@@ -1,17 +1,17 @@
 {
-  "name": "@servmaq/admin",
+  "name": "@maqserv/admin",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev -p 3001",
+    "dev": "next dev -p 3001 --turbopack",
     "start": "next start -p 3001",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@servmaq/config": "workspace:*",
-    "@servmaq/types": "workspace:*",
-    "@servmaq/ui": "workspace:*",
+    "@maqserv/config": "workspace:*",
+    "@maqserv/types": "workspace:*",
+    "@maqserv/ui": "workspace:*",
     "next": "^15.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

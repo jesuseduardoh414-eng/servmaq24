@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Button, Card, Input } from '@servmaq/ui';
-import type { Category, VendorProductRow } from '@servmaq/types';
+import { Button, Card, Input } from '@maqserv/ui';
+import type { Category, VendorProductRow } from '@maqserv/types';
 import { formatPrice } from '@/lib/format';
 
 export function ProductsManager({

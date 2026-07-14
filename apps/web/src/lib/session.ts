@@ -1,8 +1,11 @@
 import { cookies } from 'next/headers';
-import type { AuthUser } from '@servmaq/types';
+import type { AuthUser } from '@maqserv/types';
+import { SESSION_COOKIE } from './cookies';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
-export const SESSION_COOKIE = 'servmaq_session';
+// Los nombres de cookie viven en ./cookies (sin next/headers) para que el
+// middleware Edge pueda importarlos; se reexportan aquí por compatibilidad.
+export { SESSION_COOKIE, REFRESH_COOKIE } from './cookies';
 
 /**
  * Sesión del lado servidor: el JWT vive en cookie httpOnly (el JS del

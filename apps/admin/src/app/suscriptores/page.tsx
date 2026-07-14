@@ -10,7 +10,7 @@ export default async function AdminSubscribers() {
   const subs = (await adminFetch<Array<{ id: number; email: string }>>('/admin/subscribers')) ?? [];
 
   return (
-    <AdminShell adminName={admin.name}>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <h1 className="font-head text-(length:--text-2xl) mb-5">Suscriptores ({subs.length})</h1>
       <div className="max-w-xl">
         <Table headers={['Correo', 'Acciones']}>

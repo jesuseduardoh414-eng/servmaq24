@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import type { ProductCard as ProductCardDto } from '@servmaq/types';
+import type { ProductCard as ProductCardDto } from '@maqserv/types';
 import { getTheme, t } from '@/lib/theme';
 import { SESSION_COOKIE } from '@/lib/session';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';

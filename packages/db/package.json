@@ -1,5 +1,5 @@
 {
-  "name": "@servmaq/db",
+  "name": "@maqserv/db",
   "version": "0.1.0",
   "private": true,
   "description": "Cliente Prisma compartido. El esquema del ecommerce se obtiene por introspección de la BD real (prisma db pull); la tabla `themes` es nueva (sistema configurable).",
@@ -14,11 +14,18 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@maqserv/config": "workspace:*",
     "@prisma/client": "^6.8.0",
-    "@servmaq/config": "workspace:*"
+    "@supabase/supabase-js": "^2.110.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.20.0",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.3",
+    "mysql2": "^3.22.6",
+    "pg": "^8.22.0",
+    "pg-copy-streams": "^7.0.0",
     "prisma": "^6.8.0",
     "typescript": "^5.8.0"
   }

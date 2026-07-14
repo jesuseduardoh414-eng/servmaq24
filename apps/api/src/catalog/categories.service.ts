@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { prisma } from '@servmaq/db';
-import type { Category } from '@servmaq/types';
+import { prisma } from '@maqserv/db';
+import type { Category } from '@maqserv/types';
 import { imageUrl } from './images';
 
 @Injectable()

@@ -25,7 +25,7 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
   );
 
   return (
-    <AdminShell adminName={admin.name}>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: '1.2rem' }}>Órdenes</h1>
       <Table headers={['Orden', 'Cliente', 'Método', 'Total', 'Pago', 'Estado', 'Fecha']}>
         {(data?.items ?? []).map((o) => (

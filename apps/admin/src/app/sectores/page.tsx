@@ -20,7 +20,7 @@ export default async function AdminSectors() {
   const sectors = (await adminFetch<SectorRow[]>('/admin/cms/sectors')) ?? [];
 
   return (
-    <AdminShell adminName={admin.name}>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <h1 className="font-head text-(length:--text-2xl) mb-5">Sectores estratégicos</h1>
       <div className="grid gap-4 max-w-3xl">
         <SectorCreate />

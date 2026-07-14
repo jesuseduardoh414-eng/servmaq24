@@ -3,12 +3,13 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model about_sections {
-  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  id         BigInt    @id @default(autoincrement())
   type       String
   title      String?
   content    String    @db.Text
@@ -37,14 +38,15 @@ model admin_user_messages {
 }
 
 model admins {
-  id             Int       @id @default(autoincrement()) @db.UnsignedInt
+  id             Int       @id @default(autoincrement())
+  auth_id        String?   @unique @db.Uuid
   name           String
   email          String    @unique(map: "admins_email_unique")
   phone          String
   role           String    @default("Administrator")
   photo          String?
   password       String
-  status         Int       @default(1) @db.TinyInt
+  status         Int       @default(1) @db.SmallInt
   remember_token String?   @db.VarChar(100)
   created_at     DateTime? @db.Timestamp(0)
   updated_at     DateTime? @db.Timestamp(0)
@@ -59,7 +61,7 @@ model advertises {
   script String? @db.Text
   size   String
   clicks Int     @default(0)
-  status Int     @default(0) @db.TinyInt
+  status Int     @default(0) @db.SmallInt
 }
 
 model baners_derechos {
@@ -71,7 +73,7 @@ model baners_derechos {
 }
 
 model banners {
-  id       Int     @id @default(autoincrement()) @db.UnsignedInt
+  id       Int     @id @default(autoincrement())
   top1     String?
   top2     String?
   top3     String?
@@ -89,7 +91,7 @@ model banners {
 }
 
 model benefits {
-  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  id          BigInt    @id @default(autoincrement())
   title       String
   description String?   @db.Text
   created_at  DateTime? @db.Timestamp(0)
@@ -97,13 +99,14 @@ model benefits {
 }
 
 model blogs {
-  id               Int       @id @default(autoincrement()) @db.UnsignedInt
+  id               Int       @id @default(autoincrement())
   title            String
   details          String    @db.Text
   photo            String?
   source           String
+  category         String?   @default("General") @db.VarChar(50)
   views            Int       @default(0)
-  status           Int       @default(1) @db.TinyInt
+  status           Int       @default(1) @db.SmallInt
   created_at       DateTime? @db.Timestamp(0)
   updated_at       DateTime? @db.Timestamp(0)
   meta_tag         String?   @db.Text
@@ -111,7 +114,7 @@ model blogs {
 }
 
 model brands {
-  id    Int     @id @default(autoincrement()) @db.UnsignedInt
+  id    Int     @id @default(autoincrement())
   photo String
   url   String?
 }
@@ -137,31 +140,35 @@ model categorias_populares {
 }
 
 model categories {
-  id       Int     @id @default(autoincrement()) @db.UnsignedInt
+  id       Int     @id @default(autoincrement())
   cat_name String  @db.VarChar(100)
   cat_slug String  @unique(map: "bloodgroups_slug_unique")
-  status   Int     @default(1) @db.TinyInt
+  status   Int     @default(1) @db.SmallInt
   photo    String?
 
   @@index([id], map: "id")
 }
 
 model childcategories {
-  id             Int    @id @default(autoincrement()) @db.UnsignedInt
-  subcategory_id Int    @db.UnsignedInt
+  id             Int    @id @default(autoincrement())
+  subcategory_id Int   
   child_name     String
   child_slug     String
-  status         Int    @default(1) @db.TinyInt
+  status         Int    @default(1) @db.SmallInt
 }
 
 model comments {
   id         Int      @id @default(autoincrement())
-  user_id    Int      @db.UnsignedInt
-  product_id Int      @db.UnsignedInt
+  user_id    Int
+  product_id Int
   text       String   @db.Text
-  created_at DateTime @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  created_at DateTime @default(now()) @db.Timestamp(0)
   updated_at DateTime @default(now()) @db.Timestamp(0)
   rating     Int?     @default(5)
+  // Moderación: 1 = visible/aprobada (default), 0 = oculta.
+  status     Int      @default(1)
+  // Orden de la que proviene la compra verificada (null en comentarios legacy).
+  order_id   Int?
 }
 
 model conversations {
@@ -186,11 +193,11 @@ model counters {
 model coupons {
   id         Int      @id @default(autoincrement())
   code       String
-  type       Int      @db.TinyInt
+  type       Int      @db.SmallInt
   price      Float
   times      String?
-  used       Int      @default(0) @db.UnsignedInt
-  status     Int      @default(1) @db.TinyInt
+  used       Int      @default(0)
+  status     Int      @default(1) @db.SmallInt
   start_date DateTime @db.Date
   end_date   DateTime @db.Date
 }
@@ -212,7 +219,7 @@ model direcciones {
 }
 
 model distribusions {
-  id     Int     @id @default(autoincrement()) @db.UnsignedInt
+  id     Int     @id @default(autoincrement())
   Nombre String? @db.VarChar(250)
   photo  String
   url    String?
@@ -221,15 +228,31 @@ model distribusions {
 model email_templates {
   id            Int     @id @default(autoincrement())
   email_type    String? @db.VarChar(255)
-  email_subject String? @db.MediumText
-  email_body    String? @db.LongText
+  email_subject String? @db.Text
+  email_body    String? @db.Text
   status        Int     @default(1)
 }
 
 model faqs {
-  id    Int    @id @default(autoincrement()) @db.UnsignedInt
-  title String
-  text  String @db.Text
+  id     Int    @id @default(autoincrement())
+  title  String
+  text   String @db.Text
+  // Visibilidad en el home: 1 = visible (default), 0 = oculta.
+  status Int    @default(1)
+}
+
+/// Preguntas de producto (tipo MercadoLibre): el cliente pregunta, el admin responde.
+model product_questions {
+  id          Int       @id @default(autoincrement())
+  product_id  Int
+  user_id     Int
+  question    String    @db.Text
+  answer      String?   @db.Text // null = pendiente de responder
+  status      Int       @default(1) // 1 visible, 0 oculta
+  featured    Int       @default(0) // 1 = destacada en el FAQ del home
+  created_at  DateTime  @default(now()) @db.Timestamp(0)
+  answered_at DateTime? @db.Timestamp(0)
+  updated_at  DateTime  @default(now()) @db.Timestamp(0)
 }
 
 model favorite_sellers {
@@ -239,15 +262,15 @@ model favorite_sellers {
 }
 
 model galleries {
-  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  product_id Int?      @db.UnsignedInt
+  id         BigInt    @id @default(autoincrement())
+  product_id Int?     
   photo      String
   created_at DateTime? @db.Timestamp(0)
   updated_at DateTime? @db.Timestamp(0)
 }
 
 model generalsettings {
-  id                    Int      @id @default(autoincrement()) @db.UnsignedInt
+  id                    Int      @id @default(autoincrement())
   logo                  String?
   favicon               String
   title                 String
@@ -268,29 +291,29 @@ model generalsettings {
   pb                    String?
   sk                    String?
   ss                    String?
-  pcheck                Int      @default(1) @db.TinyInt
-  scheck                Int      @default(1) @db.TinyInt
-  mcheck                Int      @default(1) @db.TinyInt
-  bcheck                Int      @default(1) @db.TinyInt
-  ccheck                Int      @default(1) @db.TinyInt
+  pcheck                Int      @default(1) @db.SmallInt
+  scheck                Int      @default(1) @db.SmallInt
+  mcheck                Int      @default(1) @db.SmallInt
+  bcheck                Int      @default(1) @db.SmallInt
+  ccheck                Int      @default(1) @db.SmallInt
   mmi                   String   @db.Text
   bi                    String   @db.Text
-  ship                  Int      @db.UnsignedInt
+  ship                  Int     
   vid                   String
   vidimg                String
   tags                  String?  @db.Text
   sign                  Boolean  @default(false)
-  slider                Int      @default(1) @db.TinyInt
-  category              Int      @default(1) @db.TinyInt
-  sb                    Int      @default(1) @db.TinyInt
-  hv                    Int      @default(1) @db.TinyInt
-  ftp                   Int      @default(1) @db.TinyInt
-  lp                    Int      @default(1) @db.TinyInt
-  pp                    Int      @default(1) @db.TinyInt
-  lb                    Int      @default(1) @db.TinyInt
-  bs                    Int      @default(1) @db.TinyInt
-  ts                    Int      @default(1) @db.TinyInt
-  bl                    Int      @default(1) @db.TinyInt
+  slider                Int      @default(1) @db.SmallInt
+  category              Int      @default(1) @db.SmallInt
+  sb                    Int      @default(1) @db.SmallInt
+  hv                    Int      @default(1) @db.SmallInt
+  ftp                   Int      @default(1) @db.SmallInt
+  lp                    Int      @default(1) @db.SmallInt
+  pp                    Int      @default(1) @db.SmallInt
+  lb                    Int      @default(1) @db.SmallInt
+  bs                    Int      @default(1) @db.SmallInt
+  ts                    Int      @default(1) @db.SmallInt
+  bl                    Int      @default(1) @db.SmallInt
   colors                String?
   bimg                  String
   loader                String
@@ -299,7 +322,7 @@ model generalsettings {
   count_date            String?
   count_link            String?
   count_image           String?
-  service_section       Int      @default(0) @db.TinyInt
+  service_section       Int      @default(0) @db.SmallInt
   order_title           String?  @db.Text
   order_text            String?  @db.Text
   cart_success          String?
@@ -321,7 +344,7 @@ model generalsettings {
   fixed_commission      Int?     @default(0)
   percentage_commission Int?     @default(0)
   tax                   Int?     @default(0)
-  ship_info             Int      @default(0) @db.TinyInt
+  ship_info             Int      @default(0) @db.SmallInt
   multiple_ship         Int      @default(0)
   is_talkto             Boolean  @default(true)
   talkto                String?  @db.Text
@@ -347,23 +370,23 @@ model generalsettings {
   footer_background     String?  @db.Text
   is_loader             Boolean  @default(true)
   whatsapp              String?  @db.VarChar(200)
-  status_shipping       String?  @db.LongText
-  cp                    String   @db.TinyText
-  descu                 String   @db.TinyText
+  status_shipping       String?  @db.Text
+  cp                    String   @db.Text
+  descu                 String   @db.Text
   cotizaciones          Int      @default(0)
   theme_settings        String?  @db.Text
   active_theme          String   @default("default")
   why_choose_us_photo   String?
-  is_why_choose_us      Int?     @default(1) @db.TinyInt
-  is_inf_sitio          Int?     @default(1) @db.TinyInt
+  is_why_choose_us      Int?     @default(1) @db.SmallInt
+  is_inf_sitio          Int?     @default(1) @db.SmallInt
   is_machinery_gallery  Boolean  @default(true)
   is_machinery_benefits Boolean  @default(true)
-  is_strategic_sectors  Int      @default(1) @db.TinyInt
+  is_strategic_sectors  Int      @default(1) @db.SmallInt
   quote_conditions      String?  @db.Text
 }
 
 model hero_sections {
-  id         Int       @id @default(autoincrement()) @db.UnsignedInt
+  id         Int       @id @default(autoincrement())
   badge      String?
   title      String?
   subtitle   String?   @db.Text
@@ -375,19 +398,19 @@ model hero_sections {
 }
 
 model home_question_images {
-  id               BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
-  home_question_id BigInt         @db.UnsignedBigInt
+  id               BigInt         @id @default(autoincrement())
+  home_question_id BigInt        
   photo            String
   order            Int            @default(0)
   created_at       DateTime?      @db.Timestamp(0)
   updated_at       DateTime?      @db.Timestamp(0)
   home_questions   home_questions @relation(fields: [home_question_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "home_question_images_home_question_id_foreign")
 
-  @@index([home_question_id], map: "home_question_images_home_question_id_foreign")
+  @@index([home_question_id], map: "home_question_images_home_question_id_idx")
 }
 
 model home_questions {
-  id                   BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  id                   BigInt                 @id @default(autoincrement())
   title                String?
   subtitle             String?
   content              String?                @db.Text
@@ -407,11 +430,11 @@ model images {
 }
 
 model inf_sitio {
-  id          Int       @id @default(autoincrement()) @db.UnsignedInt
+  id          Int       @id @default(autoincrement())
   frase       String?
   titulo      String?
   descripcion String?   @db.Text
-  imagenes    String?   @db.LongText
+  imagenes    String?   @db.Text
   created_at  DateTime? @db.Timestamp(0)
   updated_at  DateTime? @db.Timestamp(0)
   mision      String?   @db.Text
@@ -676,7 +699,7 @@ model messages {
 }
 
 model migrations {
-  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  id        Int    @id @default(autoincrement())
   migration String
   batch     Int
 }
@@ -711,12 +734,12 @@ model mirrormx_customer_chat_user {
   image         String?  @db.Char(255)
   info          String?  @db.Text
   roles         String?  @db.Char(128)
-  last_activity DateTime @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  last_activity DateTime @default(now()) @db.Timestamp(0)
 }
 
 model notifications {
   id              Int       @id @default(autoincrement())
-  order_id        Int?      @db.UnsignedInt
+  order_id        Int?     
   user_id         Int?
   vendor_id       Int?
   product_id      Int?
@@ -729,12 +752,12 @@ model notifications {
 model orders {
   id               Int           @id @default(autoincrement())
   user_id          Int
-  cart             String        @db.Text
+  cart             Bytes
   method           String?       @db.VarChar(255)
   shipping         String?       @db.VarChar(255)
   pickup_location  String?       @db.VarChar(255)
   totalQty         String
-  pay_amount       Float         @db.Float
+  pay_amount       Float         @db.Real
   txnid            String?       @db.VarChar(255)
   charge_id        String?       @db.VarChar(255)
   order_number     String        @db.VarChar(255)
@@ -772,23 +795,23 @@ model pages {
   id               Int     @id @default(autoincrement())
   title            String
   slug             String
-  text             String  @db.LongText
-  pos              Int     @default(0) @db.TinyInt
+  text             String  @db.Text
+  pos              Int     @default(0) @db.SmallInt
   meta_tag         String? @db.Text
   meta_description String? @db.Text
 }
 
 model pagesettings {
-  id              Int     @id @default(autoincrement()) @db.UnsignedInt
+  id              Int     @id @default(autoincrement())
   contact_success String
   contact_email   String
   contact_title   String?
   contact_text    String? @db.Text
   about           String  @db.Text
   faq             String  @db.Text
-  c_status        Int     @default(1) @db.TinyInt
-  a_status        Int     @default(1) @db.TinyInt
-  f_status        Int     @default(1) @db.TinyInt
+  c_status        Int     @default(1) @db.SmallInt
+  a_status        Int     @default(1) @db.SmallInt
+  f_status        Int     @default(1) @db.SmallInt
   bn              String
   bnimg           String
   is_currency     Boolean @default(true)
@@ -798,7 +821,7 @@ model payment_gateways {
   id     Int    @id @default(autoincrement())
   title  String
   text   String @db.Text
-  status Int    @default(1) @db.TinyInt
+  status Int    @default(1) @db.SmallInt
 }
 
 model payments {
@@ -811,54 +834,57 @@ model payments {
   featured       String   @db.VarChar(255)
   method         String?  @db.VarChar(255)
   charge_id      String?  @db.VarChar(255)
-  process_time   DateTime @db.DateTime(0)
+  process_time   DateTime @db.Timestamp(0)
 }
 
 model pickups {
-  id       Int    @id @default(autoincrement()) @db.UnsignedInt
+  id       Int    @id @default(autoincrement())
   location String
 }
 
 model portfolios {
-  id     Int     @id @default(autoincrement()) @db.UnsignedInt
+  id     Int     @id @default(autoincrement())
   client String
   photo  String?
   review String  @db.Text
 }
 
 model product_clicks {
-  id         Int       @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   product_id Int
-  date       DateTime? @db.Date
+  date       DateTime @db.Date
+  clicks     Int      @default(0)
+
+  @@unique([product_id, date])
 }
 
 model products {
-  id                Int       @id @default(autoincrement()) @db.UnsignedInt
-  category_id       Int       @db.UnsignedInt
-  subcategory_id    Int?      @db.UnsignedInt
-  childcategory_id  Int?      @db.UnsignedInt
+  id                Int       @id @default(autoincrement())
+  category_id       Int      
+  subcategory_id    Int?     
+  childcategory_id  Int?     
   user_id           Int       @default(0)
   name              String    @db.Text
   product_theme     String    @default("default")
   photo             String?
   size              String?
   color             String?   @db.Text
-  cprice            Float     @db.Float
-  pprice            Float?    @db.Float
+  cprice            Float     @db.Real
+  pprice            Float?    @db.Real
   description       String    @db.Text
   stock             Int?
   policy            String?   @db.Text
-  status            Int       @default(1) @db.UnsignedTinyInt
-  views             Int       @default(0) @db.UnsignedInt
+  status            Int       @default(1) @db.SmallInt
+  views             Int       @default(0)
   tags              String?
   created_at        DateTime? @db.Timestamp(0)
   updated_at        DateTime? @db.Timestamp(0)
-  featured          Int       @default(0) @db.UnsignedTinyInt
-  best              Int       @default(0) @db.UnsignedTinyInt
-  top               Int       @default(0) @db.UnsignedTinyInt
-  hot               Int       @default(0) @db.UnsignedTinyInt
-  latest            Int       @default(0) @db.UnsignedTinyInt
-  big               Int       @default(0) @db.UnsignedTinyInt
+  featured          Int       @default(0) @db.SmallInt
+  best              Int       @default(0) @db.SmallInt
+  top               Int       @default(0) @db.SmallInt
+  hot               Int       @default(0) @db.SmallInt
+  latest            Int       @default(0) @db.SmallInt
+  big               Int       @default(0) @db.SmallInt
   features          String?   @db.Text
   colors            String?   @db.Text
   product_condition Boolean   @default(false)
@@ -880,7 +906,7 @@ model products {
   Corto             String?   @db.Text
   Clave             String?   @db.Text
   Alterno           String?   @db.Text
-  PBase             Float?    @db.Float
+  PBase             Float?    @db.Real
   Marca             String?   @db.Text
   lote              String?
   caducidad         DateTime? @db.Date
@@ -891,8 +917,8 @@ model products {
 }
 
 model quote_emails {
-  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  quote_id    Int       @db.UnsignedInt
+  id          BigInt    @id @default(autoincrement())
+  quote_id    Int      
   to          String
   subject     String
   message     String    @db.Text
@@ -902,8 +928,8 @@ model quote_emails {
 }
 
 model quotes {
-  id                 BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  user_id            BigInt?   @db.UnsignedBigInt
+  id                 BigInt    @id @default(autoincrement())
+  user_id            BigInt?  
   name               String
   email              String
   phone              String
@@ -914,7 +940,7 @@ model quotes {
   acquisition_option String?
   comments           String?   @db.Text
   address            String?   @db.Text
-  cart_data          String    @db.LongText
+  cart_data          String    @db.Text
   subtotal           Decimal   @db.Decimal(10, 2)
   freight_cost       Decimal   @default(0.00) @db.Decimal(10, 2)
   freight_distance   String?
@@ -928,8 +954,8 @@ model quotes {
 }
 
 model rastreos {
-  id            Int       @id @default(autoincrement()) @db.UnsignedInt
-  order_id      Int       @db.UnsignedInt
+  id            Int       @id @default(autoincrement())
+  order_id      Int      
   num_tracking  String    @db.VarChar(1000)
   nota          String?   @db.Text
   fecha_entrega DateTime  @db.Date
@@ -939,7 +965,7 @@ model rastreos {
 }
 
 model rental_period_options {
-  id         Int       @id @default(autoincrement()) @db.UnsignedInt
+  id         Int       @id @default(autoincrement())
   label      String    @db.VarChar(50)
   days       Int
   order      Int       @default(0)
@@ -949,9 +975,9 @@ model rental_period_options {
 }
 
 model rental_periods {
-  id            Int       @id @default(autoincrement()) @db.UnsignedInt
-  order_id      Int       @db.UnsignedInt
-  product_id    Int       @db.UnsignedInt
+  id            Int       @id @default(autoincrement())
+  order_id      Int      
+  product_id    Int      
   start_date    DateTime  @db.Date
   end_date      DateTime  @db.Date
   days          Int
@@ -967,20 +993,20 @@ model rental_periods {
 
 model replies {
   id         Int      @id @default(autoincrement())
-  user_id    Int      @db.UnsignedInt
-  comment_id Int      @db.UnsignedInt
+  user_id    Int     
+  comment_id Int     
   text       String   @db.Text
-  created_at DateTime @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
-  updated_at DateTime @default(dbgenerated("('0000-00-00 00:00:00')")) @db.Timestamp(0)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
 }
 
 model reviews {
-  id          Int      @id @default(autoincrement()) @db.UnsignedInt
-  user_id     Int      @db.UnsignedInt
-  product_id  Int      @db.UnsignedInt
+  id          Int      @id @default(autoincrement())
+  user_id     Int     
+  product_id  Int     
   review      String   @db.Text
-  rating      Int      @db.TinyInt
-  review_date DateTime @db.DateTime(0)
+  rating      Int      @db.SmallInt
+  review_date DateTime @db.Timestamp(0)
 }
 
 model rfqcorreos {
@@ -1005,7 +1031,7 @@ model rfqs {
 }
 
 model seotools {
-  id               Int     @id @default(autoincrement()) @db.UnsignedInt
+  id               Int     @id @default(autoincrement())
   google_analytics String? @db.Text
   meta_keys        String? @db.Text
 }
@@ -1018,11 +1044,11 @@ model services {
 }
 
 model site_reviews {
-  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  id         BigInt    @id @default(autoincrement())
   user_id    Int
   review     String    @db.Text
   rating     Int
-  status     Int       @default(0) @db.TinyInt
+  status     Int       @default(0) @db.SmallInt
   created_at DateTime? @db.Timestamp(0)
   updated_at DateTime? @db.Timestamp(0)
 }
@@ -1043,7 +1069,7 @@ model sites {
 }
 
 model sliders {
-  id          Int     @id @default(autoincrement()) @db.UnsignedInt
+  id          Int     @id @default(autoincrement())
   title       String
   description String  @db.Text
   photo       String
@@ -1066,17 +1092,17 @@ model social_providers {
 }
 
 model sociallinks {
-  id             Int     @id @default(autoincrement()) @db.UnsignedInt
+  id             Int     @id @default(autoincrement())
   facebook       String
   gplus          String
   twitter        String
   linkedin       String
-  f_status       Int     @default(1) @db.TinyInt
-  g_status       Int     @default(1) @db.TinyInt
-  t_status       Int     @default(1) @db.TinyInt
-  l_status       Int     @default(1) @db.TinyInt
-  fcheck         Int?    @db.TinyInt
-  gcheck         Int?    @db.TinyInt
+  f_status       Int     @default(1) @db.SmallInt
+  g_status       Int     @default(1) @db.SmallInt
+  t_status       Int     @default(1) @db.SmallInt
+  l_status       Int     @default(1) @db.SmallInt
+  fcheck         Int?    @db.SmallInt
+  gcheck         Int?    @db.SmallInt
   fclient_id     String? @db.Text
   fclient_secret String? @db.Text
   fredirect      String? @db.Text
@@ -1086,7 +1112,7 @@ model sociallinks {
 }
 
 model strategic_sector_contents {
-  id                          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  id                          BigInt    @id @default(autoincrement())
   trayectoria_header_title    String?
   trayectoria_header_subtitle String?
   historia_header_title       String?
@@ -1095,7 +1121,7 @@ model strategic_sector_contents {
   servicios_header_subtitle   String?
   proceso_header_title        String?
   proceso_header_subtitle     String?
-  hitos                       String?   @db.LongText
+  hitos                       String?   @db.Text
   created_at                  DateTime? @db.Timestamp(0)
   updated_at                  DateTime? @db.Timestamp(0)
   esencia_header_title        String?
@@ -1110,7 +1136,7 @@ model strategic_sector_contents {
 }
 
 model strategic_sectors {
-  id              BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  id              BigInt    @id @default(autoincrement())
   title           String
   slug            String?
   description     String?   @db.Text
@@ -1121,7 +1147,7 @@ model strategic_sectors {
   proceso         String?   @db.Text
   image           String?
   bg_color        String    @default("deep-blue")
-  status          Int       @default(1) @db.TinyInt
+  status          Int       @default(1) @db.SmallInt
   created_at      DateTime? @db.Timestamp(0)
   updated_at      DateTime? @db.Timestamp(0)
   trayectoria_img String?
@@ -1131,7 +1157,7 @@ model strategic_sectors {
   proceso_img     String?
   servicios_lista String?   @db.Text
   proceso_cards   String?   @db.Text
-  hitos           String?   @db.LongText
+  hitos           String?   @db.Text
 }
 
 model sub_replies {
@@ -1144,15 +1170,15 @@ model sub_replies {
 }
 
 model subcategories {
-  id          Int    @id @default(autoincrement()) @db.UnsignedInt
-  category_id Int    @db.UnsignedInt
+  id          Int    @id @default(autoincrement())
+  category_id Int   
   sub_name    String
   sub_slug    String
   status      Int    @default(1) @db.SmallInt
 }
 
 model subscribers {
-  id    Int    @id @default(autoincrement()) @db.UnsignedInt
+  id    Int    @id @default(autoincrement())
   email String @unique(map: "subscribers_email_unique")
 }
 
@@ -1168,11 +1194,11 @@ model subscriptions {
 }
 
 model theme_palettes {
-  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  user_id      BigInt?   @db.UnsignedBigInt
+  id           BigInt    @id @default(autoincrement())
+  user_id      BigInt?  
   name         String    @db.VarChar(100)
   theme_name   String    @db.VarChar(50)
-  palette_data String    @db.LongText
+  palette_data String    @db.Text
   is_default   Boolean   @default(false)
   created_at   DateTime? @db.Timestamp(0)
   updated_at   DateTime? @db.Timestamp(0)
@@ -1210,7 +1236,8 @@ model user_subscriptions {
 }
 
 model users {
-  id                 Int       @id @default(autoincrement()) @db.UnsignedInt
+  id                 Int       @id @default(autoincrement())
+  auth_id            String?   @unique @db.Uuid
   name               String
   photo              String?
   zip                String?
@@ -1223,23 +1250,23 @@ model users {
   password           String?
   created_at         DateTime? @db.Timestamp(0)
   updated_at         DateTime? @db.Timestamp(0)
-  is_provider        Int       @default(0) @db.TinyInt
+  is_provider        Int       @default(0) @db.SmallInt
   shop_name          String?
   owner_name         String?
   shop_number        String?
   shop_address       String?
   reg_number         String?
   shop_message       String?   @db.Text
-  is_vendor          Int       @default(0) @db.TinyInt
+  is_vendor          Int       @default(0) @db.SmallInt
   shop_details       String?   @db.Text
   f_url              String?
   g_url              String?
   t_url              String?
   l_url              String?
-  f_check            Int?      @default(0) @db.TinyInt
-  g_check            Int?      @default(0) @db.TinyInt
-  t_check            Int?      @default(0) @db.TinyInt
-  l_check            Int?      @default(0) @db.TinyInt
+  f_check            Int?      @default(0) @db.SmallInt
+  g_check            Int?      @default(0) @db.SmallInt
+  t_check            Int?      @default(0) @db.SmallInt
+  l_check            Int?      @default(0) @db.SmallInt
   shipping_cost      Int       @default(0)
   current_balance    Int       @default(0)
   affilate_code      String?
@@ -1285,21 +1312,23 @@ model vendor_sliders {
 }
 
 model why_choose_us {
-  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  id          BigInt    @id @default(autoincrement())
   icon        String?
   photo       String?
   title       String    @db.VarChar(100)
   description String    @db.Text
   order       Int       @default(0)
   status      Boolean   @default(true)
+  // Dónde se muestra la razón: 'both' (default) | 'home' (solo landing) | 'about' (solo /quienes-somos).
+  placement   String?   @default("both") @db.VarChar(20)
   created_at  DateTime? @db.Timestamp(0)
   updated_at  DateTime? @db.Timestamp(0)
 }
 
 model wishlists {
-  id         Int @id @default(autoincrement()) @db.UnsignedInt
-  user_id    Int @db.UnsignedInt
-  product_id Int @db.UnsignedInt
+  id         Int @id @default(autoincrement())
+  user_id    Int
+  product_id Int
 }
 
 model withdraws {
@@ -1313,10 +1342,10 @@ model withdraws {
   address    String?          @db.Text
   swift      String?          @db.VarChar(255)
   reference  String?          @db.Text
-  amount     Float?           @db.Float
-  fee        Float?           @default(0) @db.Float
-  created_at DateTime?        @db.DateTime(0)
-  updated_at DateTime?        @db.DateTime(0)
+  amount     Float?           @db.Real
+  fee        Float?           @default(0) @db.Real
+  created_at DateTime?        @db.Timestamp(0)
+  updated_at DateTime?        @db.Timestamp(0)
   status     withdraws_status @default(pending)
   type       String           @db.VarChar(10)
 }
@@ -1347,7 +1376,7 @@ enum orders_status {
 }
 
 /// Tabla NUEVA del sistema de diseño configurable (no viene del Laravel viejo).
-/// Tokens/copys publicados + borrador del editor visual. Ver @servmaq/config.
+/// Tokens/copys publicados + borrador del editor visual. Ver @maqserv/config.
 model Theme {
   id          Int       @id @default(autoincrement())
   slug        String    @unique

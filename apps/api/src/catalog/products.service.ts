@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { prisma } from '@servmaq/db';
-import { productSlug } from '@servmaq/config';
-import type { Paginated, ProductCard, ProductDetail } from '@servmaq/types';
+import { prisma } from '@maqserv/db';
+import { productSlug } from '@maqserv/config';
+import type { Paginated, ProductCard, ProductDetail } from '@maqserv/types';
 import { imageUrl } from './images';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 16; // 2 grupos de 8 por página (8 → anuncio → 8 → promo)
 
 type ProductRow = {
   id: number;

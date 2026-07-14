@@ -1,48 +1,32 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { defaultTheme, themeTokensSchema } from '@maqserv/config';
 import { adminFetch, getAdmin } from '@/lib/admin';
 import { AdminShell } from '@/components/AdminShell';
-import { Table, Td } from '@/components/Table';
-import { ActionButton } from '@/components/actions';
+import { BlogManager, type BlogRow } from './BlogManager';
 
-interface BlogRow {
-  id: number;
-  title: string;
-  status: number;
-  createdAt: string | null;
-}
+interface ThemeRow { id: number; active: boolean }
+interface ThemeDetail { id: number; copys: Record<string, Record<string, string>>; tokens: unknown }
 
 export default async function AdminBlog() {
   const admin = await getAdmin();
   if (!admin) redirect('/login');
-  const blogs = (await adminFetch<BlogRow[]>('/admin/cms/blogs')) ?? [];
+
+  const [blogs, themes] = await Promise.all([
+    adminFetch<BlogRow[]>('/admin/cms/blogs').then((r) => r ?? []),
+    adminFetch<ThemeRow[]>('/admin/themes').catch(() => [] as ThemeRow[]),
+  ]);
+  const active = (themes ?? []).find((t) => t.active) ?? (themes ?? [])[0] ?? null;
+  const detail = active ? await adminFetch<ThemeDetail>(`/admin/themes/${active.id}`) : null;
+  const tokens = detail?.tokens ? themeTokensSchema.parse(detail.tokens) : defaultTheme.tokens;
 
   return (
-    <AdminShell adminName={admin.name}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.2rem' }}>
-        <h1 style={{ fontSize: 'var(--text-2xl)' }}>Blog</h1>
-        <Link href="/blog/nuevo" style={{ textDecoration: 'none', color: 'var(--color-primary-fg)', background: 'var(--color-primary)', fontWeight: 600, fontSize: 'var(--text-sm)', padding: '.5em 1em', borderRadius: 'var(--radius-button)' }}>
-          + Nueva entrada
-        </Link>
-      </div>
-      <Table headers={['Título', 'Fecha', 'Estado', 'Acciones']}>
-        {blogs.map((b) => (
-          <tr key={b.id} style={{ opacity: b.status === 1 ? 1 : 0.55 }}>
-            <Td><strong>{b.title}</strong></Td>
-            <Td muted>{b.createdAt ? new Date(b.createdAt).toLocaleDateString('es-MX') : ''}</Td>
-            <Td>{b.status === 1 ? 'Publicado' : 'Oculto'}</Td>
-            <Td>
-              <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>
-                <Link href={`/blog/editar/${b.id}`} style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: 'var(--text-sm)', textDecoration: 'none' }}>
-                  Editar
-                </Link>
-                <ActionButton path={`cms/blogs/${b.id}`} body={{ status: b.status === 1 ? 0 : 1 }} label={b.status === 1 ? 'Ocultar' : 'Publicar'} />
-                <ActionButton path={`cms/blogs/${b.id}`} method="DELETE" label="Eliminar" variant="ghost" confirm="¿Eliminar esta entrada?" />
-              </div>
-            </Td>
-          </tr>
-        ))}
-      </Table>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
+      <BlogManager
+        blogs={blogs}
+        themeId={active?.id ?? null}
+        copys={detail?.copys ?? { es: {} }}
+        tokens={tokens}
+      />
     </AdminShell>
   );
 }

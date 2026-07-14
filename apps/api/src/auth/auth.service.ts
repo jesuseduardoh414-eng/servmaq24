@@ -1,19 +1,24 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
-import { prisma } from '@servmaq/db';
-import type { AuthResponse, AuthUser } from '@servmaq/types';
+import { prisma } from '@maqserv/db';
+import type { AuthResponse, AuthUser } from '@maqserv/types';
+import { adminCreateUser, adminSetMetadata, passwordGrant, refreshGrant } from '../common/supabase-auth';
 
 /**
- * Auth compatible con el legacy: la tabla `users` guarda hashes bcrypt de
- * Laravel ($2y$) que bcryptjs verifica sin cambios → los clientes existentes
- * entran con su contraseña de siempre. Hashes nuevos: $2b$ cost 10.
+ * Auth de CLIENTES vía Supabase Auth. Los usuarios legacy se importaron a auth.users
+ * con su hash bcrypt (entran con su contraseña de siempre). El JWT de Supabase lleva
+ * app_metadata.app_user_id, que los guards mapean a users.id.
  */
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwt: JwtService) {}
-
-  private toAuthUser(u: { id: number; name: string; email: string; phone: string | null; address: string | null; city: string | null; zip: string | null }): AuthUser {
+  private toAuthUser(u: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+    address: string | null;
+    city: string | null;
+    zip: string | null;
+  }): AuthUser {
     return {
       id: u.id,
       name: u.name,
@@ -25,35 +30,48 @@ export class AuthService {
     };
   }
 
-  private async issue(user: AuthUser): Promise<AuthResponse> {
-    const token = await this.jwt.signAsync({ sub: user.id, email: user.email });
-    return { token, user };
-  }
-
   async register(input: { name: string; email: string; password: string }): Promise<AuthResponse> {
     const exists = await prisma.users.findUnique({ where: { email: input.email } });
     if (exists) throw new ConflictException('Ya existe una cuenta con ese correo');
 
-    const hash = await bcrypt.hash(input.password, 10);
+    // 1) crea la identidad en Supabase Auth, 2) la fila de la app, 3) enlaza id en el metadata
+    const authUser = await adminCreateUser(input.email, input.password, { role: 'customer' });
     const u = await prisma.users.create({
       data: {
         name: input.name,
         email: input.email,
-        password: hash,
+        auth_id: authUser.id,
         created_at: new Date(),
         updated_at: new Date(),
       },
     });
-    return this.issue(this.toAuthUser(u));
+    await adminSetMetadata(authUser.id, { role: 'customer', app_user_id: u.id });
+
+    const session = await passwordGrant(input.email, input.password);
+    const token = session.access_token;
+    if (!token) throw new UnauthorizedException('No se pudo iniciar sesión tras el registro');
+    return { token, refresh_token: session.refresh_token, user: this.toAuthUser(u) };
   }
 
   async login(input: { email: string; password: string }): Promise<AuthResponse> {
-    const u = await prisma.users.findUnique({ where: { email: input.email } });
-    // Mensaje único para credenciales inválidas: no revelar si el correo existe
-    if (!u?.password) throw new UnauthorizedException('Correo o contraseña incorrectos');
-    const ok = await bcrypt.compare(input.password, u.password);
-    if (!ok) throw new UnauthorizedException('Correo o contraseña incorrectos');
-    return this.issue(this.toAuthUser(u));
+    const session = await passwordGrant(input.email, input.password);
+    const token = session.access_token;
+    if (!token) throw new UnauthorizedException('Correo o contraseña incorrectos');
+    const appUserId = session.user?.app_metadata?.app_user_id;
+    const u =
+      typeof appUserId === 'number'
+        ? await prisma.users.findUnique({ where: { id: appUserId } })
+        : await prisma.users.findUnique({ where: { email: input.email } });
+    if (!u) throw new UnauthorizedException('Correo o contraseña incorrectos');
+    return { token, refresh_token: session.refresh_token, user: this.toAuthUser(u) };
+  }
+
+  /** Renueva el access token (1h) con el refresh token de Supabase. */
+  async refresh(refresh_token: string): Promise<{ token: string; refresh_token?: string }> {
+    const session = await refreshGrant(refresh_token);
+    const token = session.access_token;
+    if (!token) throw new UnauthorizedException('Sesión expirada');
+    return { token, refresh_token: session.refresh_token };
   }
 
   async me(userId: number): Promise<AuthUser> {

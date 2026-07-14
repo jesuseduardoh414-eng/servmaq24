@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card, Input } from '@servmaq/ui';
-import type { AuthUser, CheckoutResult, CouponCheck, PaymentMethod, PaymentMethodId } from '@servmaq/types';
+import { Button, Card, Input } from '@maqserv/ui';
+import type { AuthUser, CheckoutResult, CouponCheck, PaymentMethod, PaymentMethodId } from '@maqserv/types';
 import { cartLineTotal, useCart } from '@/components/CartProvider';
 import { formatPrice } from '@/lib/format';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input } from '@servmaq/ui';
+import { Button, Input } from '@maqserv/ui';
 
 export function Newsletter({
   labels,

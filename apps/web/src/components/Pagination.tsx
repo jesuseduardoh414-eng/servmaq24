@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { Theme } from '@servmaq/config';
+import type { Theme } from '@maqserv/config';
 import { t } from '@/lib/theme';
 
 export function Pagination({

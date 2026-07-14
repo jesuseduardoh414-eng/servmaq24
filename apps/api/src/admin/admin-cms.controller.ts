@@ -3,33 +3,31 @@ import {
   ParseIntPipe, Patch, Post, UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { supabaseStorage } from '../common/supabase-multer';
 import { join } from 'path';
 import { mkdirSync } from 'fs';
 import { z } from 'zod';
-import { prisma } from '@servmaq/db';
-import { productSlug } from '@servmaq/config';
+import { prisma } from '@maqserv/db';
+import { productSlug, themeTokensSchema } from '@maqserv/config';
 import { AdminGuard } from './admin-auth';
-import { imageUrl } from '../catalog/images';
+import { imageUrl, normLegacyText } from '../catalog/images';
 
-const UPLOADS_DIR = join(process.cwd(), 'uploads');
-mkdirSync(UPLOADS_DIR, { recursive: true });
-const photoStorage = diskStorage({
-  destination: UPLOADS_DIR,
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9.]+/g, '-').slice(-60);
-    cb(null, `${Date.now()}-${safe}`);
-  },
-});
+const photoStorage = supabaseStorage();
 const IMAGE_TYPES = /^image\/(png|jpe?g|webp|avif)$/;
 const photoOk = (f?: Express.Multer.File) => {
   if (f && !IMAGE_TYPES.test(f.mimetype)) throw new BadRequestException('Imagen inválida');
+};
+
+/** Parsea la columna legacy `inf_sitio.imagenes` (JSON array de paths) a string[]. */
+const parseInfImgs = (raw: string | null | undefined): string[] => {
+  try { const p = JSON.parse(raw ?? '[]'); return Array.isArray(p) ? p.map(String) : []; } catch { return []; }
 };
 
 const blogSchema = z.object({
   title: z.string().min(2).max(250),
   details: z.string().min(4),
   source: z.string().max(250).optional(),
+  category: z.string().max(50).optional(),
   status: z.coerce.number().int().min(0).max(1).optional(),
   metaTag: z.string().max(500).optional(),
   metaDescription: z.string().max(1000).optional(),
@@ -38,6 +36,7 @@ const blogSchema = z.object({
 const faqSchema = z.object({
   title: z.string().min(2).max(250),
   text: z.string().min(2),
+  status: z.coerce.number().int().min(0).max(1).optional(), // 1 visible, 0 oculta
 });
 
 const heroSchema = z.object({
@@ -51,6 +50,7 @@ const heroSchema = z.object({
 const itemSchema = z.object({
   title: z.string().min(2).max(190),
   text: z.string().min(2),
+  placement: z.enum(['both', 'home', 'about']).optional(),
 });
 
 const settingsSchema = z.object({
@@ -73,7 +73,10 @@ export class AdminCmsController {
       slug: productSlug(b.title, b.id),
       title: b.title,
       status: b.status,
+      category: b.category ?? 'General',
+      author: b.source && b.source.trim() ? b.source.trim() : null,
       image: imageUrl(b.photo),
+      views: b.views ?? 0,
       createdAt: b.created_at ? b.created_at.toISOString() : null,
     }));
   }
@@ -84,6 +87,7 @@ export class AdminCmsController {
     if (!b) throw new NotFoundException();
     return {
       id: b.id, title: b.title, details: b.details, source: b.source,
+      category: b.category ?? 'General',
       status: b.status, metaTag: b.meta_tag, metaDescription: b.meta_description,
       image: imageUrl(b.photo),
     };
@@ -100,6 +104,7 @@ export class AdminCmsController {
         title: parsed.data.title,
         details: parsed.data.details,
         source: parsed.data.source ?? '',
+        category: parsed.data.category ?? 'General',
         status: parsed.data.status ?? 1,
         meta_tag: parsed.data.metaTag ?? null,
         meta_description: parsed.data.metaDescription ?? null,
@@ -124,6 +129,7 @@ export class AdminCmsController {
         ...(d.title !== undefined ? { title: d.title } : {}),
         ...(d.details !== undefined ? { details: d.details } : {}),
         ...(d.source !== undefined ? { source: d.source } : {}),
+        ...(d.category !== undefined ? { category: d.category } : {}),
         ...(d.status !== undefined ? { status: d.status } : {}),
         ...(d.metaTag !== undefined ? { meta_tag: d.metaTag } : {}),
         ...(d.metaDescription !== undefined ? { meta_description: d.metaDescription } : {}),
@@ -144,7 +150,10 @@ export class AdminCmsController {
 
   @Get('faqs')
   async faqs() {
-    return prisma.faqs.findMany({ orderBy: { id: 'asc' } });
+    const rows = await prisma.faqs.findMany({ orderBy: { id: 'asc' } });
+    // Limpia el HTML legacy para editar texto plano; al reguardar queda normalizado.
+    const strip = (s: string) => s.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
+    return rows.map((f) => ({ id: f.id, title: strip(f.title), text: strip(f.text), status: f.status }));
   }
 
   @Post('faqs')
@@ -185,10 +194,11 @@ export class AdminCmsController {
     const parsed = heroSchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException('Datos inválidos');
     photoOk(image);
+    const clear = (body as { clearImage?: string })?.clearImage === 'true';
     const existing = await prisma.hero_sections.findFirst({ orderBy: { id: 'desc' } });
     const data = {
       ...parsed.data,
-      ...(image ? { image: `uploads/${image.filename}` } : {}),
+      ...(image ? { image: `uploads/${image.filename}` } : clear ? { image: null } : {}),
       updated_at: new Date(),
     };
     if (existing) {
@@ -197,6 +207,59 @@ export class AdminCmsController {
       await prisma.hero_sections.create({ data: { ...data, created_at: new Date() } });
     }
     return { ok: true };
+  }
+
+  // ---- Subida genérica de imágenes (bloques del constructor: hero/promo, etc.) ----
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file', { storage: photoStorage, limits: { fileSize: 6 * 1024 * 1024 } }))
+  async upload(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Falta el archivo');
+    photoOk(file);
+    return { url: imageUrl(`uploads/${file.filename}`) };
+  }
+
+  // ---- Identidad de marca (logos/favicon en el tema activo) ----
+
+  @Get('branding')
+  async branding() {
+    const theme = await prisma.theme.findFirst({ where: { active: true } });
+    const tokens = (theme?.tokens ?? {}) as { branding?: Record<string, string | null> };
+    return tokens.branding ?? {};
+  }
+
+  @Patch('branding')
+  @UseInterceptors(FileInterceptor('asset', { storage: photoStorage, limits: { fileSize: 4 * 1024 * 1024 } }))
+  async updateBranding(
+    @Body() body: { slot?: string; clear?: string },
+    @UploadedFile() asset?: Express.Multer.File,
+  ) {
+    const SLOTS = ['logoLight', 'logoDark', 'favicon', 'icon', 'logoAlt'] as const;
+    const slot = String(body?.slot ?? '') as (typeof SLOTS)[number];
+    if (!SLOTS.includes(slot)) throw new BadRequestException('Slot de marca inválido');
+    // Marca acepta imágenes normales + SVG/ICO (favicon/isotipo).
+    if (asset && !/^image\/(png|jpe?g|webp|avif|svg\+xml|x-icon|vnd\.microsoft\.icon)$/.test(asset.mimetype)) {
+      throw new BadRequestException('Formato inválido (usa PNG, JPG, WebP, SVG o ICO)');
+    }
+
+    const theme = await prisma.theme.findFirst({ where: { active: true } });
+    if (!theme) throw new NotFoundException('No hay tema activo');
+
+    const url = body?.clear === 'true' ? null : asset ? imageUrl(`uploads/${asset.filename}`) : undefined;
+    if (url === undefined) throw new BadRequestException('Falta el archivo');
+
+    const tokens = themeTokensSchema.parse(theme.tokens);
+    const branding = { ...tokens.branding, [slot]: url };
+
+    // Escribir en publicado Y en el borrador (si existe) para que publicar
+    // después no borre la marca recién subida.
+    const data: { tokens: object; draftTokens?: object } = { tokens: { ...tokens, branding } };
+    if (theme.draftTokens !== null) {
+      const draft = themeTokensSchema.parse(theme.draftTokens);
+      data.draftTokens = { ...draft, branding: { ...draft.branding, [slot]: url } };
+    }
+    await prisma.theme.update({ where: { id: theme.id }, data });
+    return { ok: true, branding };
   }
 
   // ---- Servicios ----
@@ -245,6 +308,7 @@ export class AdminCmsController {
     const rows = await prisma.why_choose_us.findMany({ orderBy: { order: 'asc' } });
     return rows.map((w) => ({
       id: Number(w.id), title: w.title, text: w.description, status: w.status, image: imageUrl(w.photo),
+      placement: (w.placement === 'home' || w.placement === 'about' ? w.placement : 'both'),
     }));
   }
 
@@ -261,6 +325,7 @@ export class AdminCmsController {
         description: parsed.data.text,
         order: (max._max.order ?? 0) + 1,
         status: true,
+        placement: parsed.data.placement ?? 'both',
         photo: photo ? `uploads/${photo.filename}` : null,
         created_at: new Date(),
         updated_at: new Date(),
@@ -280,6 +345,7 @@ export class AdminCmsController {
       data: {
         ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
         ...(parsed.data.text !== undefined ? { description: parsed.data.text } : {}),
+        ...(parsed.data.placement !== undefined ? { placement: parsed.data.placement } : {}),
         ...(photo ? { photo: `uploads/${photo.filename}` } : {}),
         updated_at: new Date(),
       },
@@ -464,9 +530,35 @@ export class AdminCmsController {
   @Get('inf-sitio')
   async infSitio() {
     const r = await prisma.inf_sitio.findFirst({ orderBy: { id: 'desc' } });
-    return r
-      ? { frase: r.frase, titulo: r.titulo, descripcion: r.descripcion, mision: r.mision, vision: r.vision, objetivos: r.objetivos }
-      : null;
+    if (!r) return null;
+    return {
+      frase: r.frase, titulo: r.titulo, descripcion: normLegacyText(r.descripcion),
+      mision: normLegacyText(r.mision), vision: normLegacyText(r.vision), objetivos: normLegacyText(r.objetivos),
+      imagenes: parseInfImgs(r.imagenes).map((x) => imageUrl(x)).filter((u): u is string => !!u),
+    };
+  }
+
+  @Post('inf-sitio/image')
+  @UseInterceptors(FileInterceptor('photo', { storage: photoStorage, limits: { fileSize: 6 * 1024 * 1024 } }))
+  async addInfSitioImage(@UploadedFile() photo?: Express.Multer.File) {
+    if (!photo) throw new BadRequestException('Falta la imagen');
+    photoOk(photo);
+    const r = await prisma.inf_sitio.findFirst({ orderBy: { id: 'desc' } });
+    const arr = parseInfImgs(r?.imagenes);
+    arr.push(`uploads/${photo.filename}`);
+    if (r) await prisma.inf_sitio.update({ where: { id: r.id }, data: { imagenes: JSON.stringify(arr), updated_at: new Date() } });
+    else await prisma.inf_sitio.create({ data: { imagenes: JSON.stringify(arr), created_at: new Date(), updated_at: new Date() } });
+    return { imagenes: arr.map((x) => imageUrl(x)).filter((u): u is string => !!u) };
+  }
+
+  @Delete('inf-sitio/image/:index')
+  async removeInfSitioImage(@Param('index', ParseIntPipe) index: number) {
+    const r = await prisma.inf_sitio.findFirst({ orderBy: { id: 'desc' } });
+    if (!r) return { imagenes: [] };
+    const arr = parseInfImgs(r.imagenes);
+    if (index >= 0 && index < arr.length) arr.splice(index, 1);
+    await prisma.inf_sitio.update({ where: { id: r.id }, data: { imagenes: JSON.stringify(arr), updated_at: new Date() } });
+    return { imagenes: arr.map((x) => imageUrl(x)).filter((u): u is string => !!u) };
   }
 
   @Patch('inf-sitio')

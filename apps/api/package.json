@@ -1,5 +1,5 @@
 {
-  "name": "@servmaq/api",
+  "name": "@maqserv/api",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,14 +9,16 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@maqserv/config": "workspace:*",
+    "@maqserv/db": "workspace:*",
+    "@maqserv/types": "workspace:*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.0.0",
-    "@servmaq/config": "workspace:*",
-    "@servmaq/db": "workspace:*",
-    "@servmaq/types": "workspace:*",
+    "@supabase/supabase-js": "^2.110.2",
     "bcryptjs": "^3.0.3",
+    "jose": "^6.2.3",
     "mercadopago": "^3.2.0",
     "multer": "^2.2.0",
     "reflect-metadata": "^0.2.2",

@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Button, Card, Input } from '@servmaq/ui';
-import type { AuthUser, ProductCard, QuoteDetail } from '@servmaq/types';
+import { Button, Card, Input } from '@maqserv/ui';
+import type { AuthUser, ProductCard, QuoteDetail } from '@maqserv/types';
 import { useCart } from '@/components/CartProvider';
 
 /**

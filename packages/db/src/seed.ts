@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { defaultTheme, themeSchema } from '@servmaq/config';
+import { defaultTheme, themeSchema } from '@maqserv/config';
 
 /** Siembra el tema default (maquinaria) validándolo contra el schema. */
 async function main() {

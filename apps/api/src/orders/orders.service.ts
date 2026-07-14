@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { prisma } from '@servmaq/db';
-import type { CheckoutInput, CouponCheck, OrderDetail, OrderItem, OrderSummary } from '@servmaq/types';
+import { prisma } from '@maqserv/db';
+import type { CheckoutInput, CouponCheck, OrderDetail, OrderItem, OrderSummary } from '@maqserv/types';
 import { imageUrl } from '../catalog/images';
 
 /** Réplica del formato legacy: 4 chars alfanuméricos + unix timestamp. */
@@ -40,11 +40,12 @@ export class OrdersService {
     };
   }
 
-  private parseCart(cart: string): OrderItem[] {
-    // Órdenes del Laravel viejo: bzip2 (empieza con "BZh") → no legible aquí
-    if (!cart.trimStart().startsWith('{')) return [];
+  private parseCart(cart: Uint8Array | string): OrderItem[] {
+    // cart es bytea: órdenes nuevas guardan JSON; las del Laravel viejo, bzip2 ("BZh") → no legible aquí
+    const text = typeof cart === 'string' ? cart : Buffer.from(cart).toString('utf8');
+    if (!text.trimStart().startsWith('{')) return [];
     try {
-      const parsed = JSON.parse(cart) as CartV2;
+      const parsed = JSON.parse(text) as CartV2;
       return parsed.v === 2 && Array.isArray(parsed.items) ? parsed.items : [];
     } catch {
       return [];
@@ -145,7 +146,7 @@ export class OrdersService {
     const o = await prisma.orders.create({
       data: {
         user_id: userId,
-        cart: JSON.stringify(cart),
+        cart: Buffer.from(JSON.stringify(cart), 'utf8'),
         method: METHOD_LABEL[input.method] ?? input.method,
         totalQty: String(totalQty),
         pay_amount: total,

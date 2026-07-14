@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { prisma } from '@servmaq/db';
-import { productSlug } from '@servmaq/config';
-import type { ProductCard } from '@servmaq/types';
+import { prisma } from '@maqserv/db';
+import { productSlug } from '@maqserv/config';
+import type { ProductCard } from '@maqserv/types';
 import { JwtGuard, type AuthedRequest } from '../auth/jwt.guard';
 import { imageUrl } from '../catalog/images';
 

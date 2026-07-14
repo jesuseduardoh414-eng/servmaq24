@@ -25,7 +25,7 @@ export default async function AdminQuotes() {
   const data = await adminFetch<{ items: QuoteRow[] }>('/admin/quotes');
 
   return (
-    <AdminShell adminName={admin.name}>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: '1.2rem' }}>Cotizaciones</h1>
       <Table headers={['Cotización', 'Cliente', 'Subtotal', 'Total', 'Estado', 'Acción']}>
         {(data?.items ?? []).map((q) => (

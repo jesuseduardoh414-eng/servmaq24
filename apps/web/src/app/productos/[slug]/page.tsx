@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { parseProductSlug, productSlug } from '@servmaq/config';
-import type { ProductDetail } from '@servmaq/types';
-import { Button } from '@servmaq/ui';
+import { parseProductSlug, productSlug } from '@maqserv/config';
+import type { ProductDetail } from '@maqserv/types';
+import { Button } from '@maqserv/ui';
 import { getTheme, t } from '@/lib/theme';
 import { getProduct, getSiteSettings } from '@/lib/api';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
@@ -12,8 +12,9 @@ import { Price } from '@/components/ProductCard';
 import { AddToCart } from '@/components/AddToCart';
 import { RentalAddToCart } from '@/components/RentalAddToCart';
 import { ProductComments } from '@/components/ProductComments';
+import { ProductQuestions } from '@/components/ProductQuestions';
 import { WishlistButton } from '@/components/WishlistButton';
-import type { ProductCommentsSummary } from '@servmaq/types';
+import type { ProductCommentsSummary } from '@maqserv/types';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -274,6 +275,9 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
               loginToComment: t(theme, 'comments.loginToComment'),
             }}
           />
+        </div>
+        <div style={{ marginTop: '2.5rem' }}>
+          <ProductQuestions productId={product.id} />
         </div>
       </main>
       <SiteFooter theme={theme} />

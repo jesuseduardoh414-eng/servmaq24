@@ -6,6 +6,8 @@ export interface ProductComment {
   rating: number; // 1..5
   text: string;
   date: string | null;
+  /** Reseña proveniente de una compra verificada. */
+  verified?: boolean;
 }
 
 export interface ProductCommentsSummary {

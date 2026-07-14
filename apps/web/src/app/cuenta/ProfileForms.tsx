@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Card, Input } from '@servmaq/ui';
-import type { AuthUser } from '@servmaq/types';
+import { Button, Card, Input } from '@maqserv/ui';
+import type { AuthUser } from '@maqserv/types';
 
 export function ProfileForms({
   user,

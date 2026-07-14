@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@servmaq/ui';
+import { Button } from '@maqserv/ui';
 
 export function WishlistButton({
   productId,

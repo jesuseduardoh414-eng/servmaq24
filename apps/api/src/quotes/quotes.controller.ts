@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Headers, Param, Post, Req, UseGuards } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { verifySupabaseToken } from '../common/supabase-auth';
 import { z } from 'zod';
 import { QuotesService } from './quotes.service';
 import { JwtGuard, type AuthedRequest } from '../auth/jwt.guard';
@@ -25,10 +25,7 @@ const quoteSchema = z.object({
 
 @Controller('quotes')
 export class QuotesController {
-  constructor(
-    private readonly quotes: QuotesService,
-    private readonly jwt: JwtService,
-  ) {}
+  constructor(private readonly quotes: QuotesService) {}
 
   /** Público: los invitados también pueden cotizar. Si viene Bearer, se liga al usuario. */
   @Post()
@@ -42,8 +39,8 @@ export class QuotesController {
     const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null;
     if (token) {
       try {
-        const payload = await this.jwt.verifyAsync<{ sub: number }>(token);
-        userId = payload.sub;
+        const claims = await verifySupabaseToken(token);
+        userId = claims.app_metadata?.app_user_id ?? null;
       } catch {
         userId = null; // token inválido → sigue como invitado
       }

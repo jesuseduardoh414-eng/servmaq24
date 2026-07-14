@@ -1,6 +1,6 @@
 import { Controller, Get, Injectable, Logger, Module, Post, UseGuards } from '@nestjs/common';
-import { prisma } from '@servmaq/db';
-import { productSlug } from '@servmaq/config';
+import { prisma } from '@maqserv/db';
+import { productSlug } from '@maqserv/config';
 import { AdminGuard } from '../admin/admin-auth';
 import { imageUrl } from '../catalog/images';
 

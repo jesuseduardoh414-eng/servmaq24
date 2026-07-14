@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import type { VendorMe } from '@servmaq/types';
+import type { VendorMe } from '@maqserv/types';
 import { getTheme, t } from '@/lib/theme';
 import { SESSION_COOKIE } from '@/lib/session';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';

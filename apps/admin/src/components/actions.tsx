@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@servmaq/ui';
+import { Button } from '@maqserv/ui';
 
 /** Botón que hace PATCH/DELETE al proxy admin y refresca la página. */
 export function ActionButton({

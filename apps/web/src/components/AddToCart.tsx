@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@servmaq/ui';
+import { Button } from '@maqserv/ui';
 import { useCart, type CartItem } from '@/components/CartProvider';
 
 /** Botón "añadir al carrito" del detalle de producto. No se renderiza en quoteMode (lo decide el server component). */

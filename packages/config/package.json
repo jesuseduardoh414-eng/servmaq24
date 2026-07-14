@@ -1,5 +1,5 @@
 {
-  "name": "@servmaq/config",
+  "name": "@maqserv/config",
   "version": "0.1.0",
   "private": true,
   "description": "Schema Zod del sistema de diseño configurable: tokens de tema, secciones y copys. Fuente de verdad compartida front/back.",

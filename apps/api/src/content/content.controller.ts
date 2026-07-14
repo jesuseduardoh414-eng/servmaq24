@@ -55,6 +55,11 @@ export class ContentController {
     return this.content.successCases();
   }
 
+  @Post('contact')
+  contact(@Body() body: { name?: string; email?: string; phone?: string; company?: string; need?: string; message?: string }) {
+    return this.content.contactMessage(body ?? {});
+  }
+
   @Post('subscribe')
   subscribe(@Body() body: { email?: string }) {
     const email = String(body?.email ?? '').trim().toLowerCase();

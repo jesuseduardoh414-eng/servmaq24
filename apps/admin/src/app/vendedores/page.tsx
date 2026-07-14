@@ -19,7 +19,7 @@ export default async function AdminVendors() {
   const vendors = (await adminFetch<VendorRow[]>('/admin/vendors')) ?? [];
 
   return (
-    <AdminShell adminName={admin.name}>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: '1.2rem' }}>Vendedores</h1>
       <Table headers={['Tienda', 'Titular', 'Saldo', 'Estado', 'Acciones']}>
         {vendors.map((v) => (

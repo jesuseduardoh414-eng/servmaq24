@@ -1,7 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { MercadoPagoConfig, Payment, Preference } from 'mercadopago';
-import { prisma } from '@servmaq/db';
-import type { OrderSummary, PaymentMethod } from '@servmaq/types';
+import { prisma } from '@maqserv/db';
+import type { OrderSummary, PaymentMethod } from '@maqserv/types';
 import { OrdersService } from '../orders/orders.service';
 
 const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3000';

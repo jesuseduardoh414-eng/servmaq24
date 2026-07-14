@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { z } from 'zod';
-import type { CheckoutResult } from '@servmaq/types';
+import type { CheckoutResult } from '@maqserv/types';
 import { OrdersService } from './orders.service';
 import { PaymentsService } from '../payments/payments.service';
 import { JwtGuard, type AuthedRequest } from '../auth/jwt.guard';

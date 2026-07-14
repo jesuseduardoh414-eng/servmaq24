@@ -14,3 +14,6 @@ packages/db/generated/
 
 # Imágenes de referencia/diseño (scratch local; los assets reales viven en Supabase Storage)
 imagenes/
+
+# Subidas locales de dev (en prod las imágenes van a Supabase Storage)
+uploads/

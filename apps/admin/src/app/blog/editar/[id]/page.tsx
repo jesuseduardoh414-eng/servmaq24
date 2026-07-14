@@ -11,8 +11,7 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
   if (!blog) notFound();
 
   return (
-    <AdminShell adminName={admin.name}>
-      <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: '1.2rem' }}>Editar entrada</h1>
+    <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <BlogForm initial={blog} />
     </AdminShell>
   );

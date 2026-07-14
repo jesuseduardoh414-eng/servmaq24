@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import type { VendorPublic } from '@servmaq/types';
+import type { VendorPublic } from '@maqserv/types';
 import { getTheme, t } from '@/lib/theme';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 

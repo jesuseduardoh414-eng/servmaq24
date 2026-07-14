@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import type { VendorProductRow } from '@servmaq/types';
+import type { VendorProductRow } from '@maqserv/types';
 import { getTheme, t } from '@/lib/theme';
 import { getCategories } from '@/lib/api';
 import { SESSION_COOKIE } from '@/lib/session';

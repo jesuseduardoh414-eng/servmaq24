@@ -32,6 +32,13 @@ export class AuthController {
     return this.auth.login(parsed.data);
   }
 
+  @Post('refresh')
+  refresh(@Body() body: unknown) {
+    const token = (body as { refresh_token?: string })?.refresh_token;
+    if (!token) throw new BadRequestException('Falta refresh_token');
+    return this.auth.refresh(token);
+  }
+
   @Get('me')
   @UseGuards(JwtGuard)
   me(@Req() req: AuthedRequest) {

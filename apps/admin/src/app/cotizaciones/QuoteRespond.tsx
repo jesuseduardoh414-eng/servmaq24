@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Input } from '@servmaq/ui';
+import { Button, Input } from '@maqserv/ui';
 
 /** Responder cotización: flete/impuesto/condiciones → status completed. */
 export function QuoteRespond({ quoteId, subtotal }: { quoteId: number; subtotal: number }) {

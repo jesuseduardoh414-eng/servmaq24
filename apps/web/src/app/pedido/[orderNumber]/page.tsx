@@ -2,10 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import type { OrderDetail } from '@servmaq/types';
+import type { OrderDetail } from '@maqserv/types';
 import { getTheme, t } from '@/lib/theme';
 import { SESSION_COOKIE } from '@/lib/session';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
+import { OrderStatusLive } from '@/components/OrderStatusLive';
 import { formatPrice } from '@/lib/format';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
@@ -53,7 +54,7 @@ export default async function OrderPage({ params }: { params: Promise<Params> })
         <section style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', background: 'var(--color-surface)', padding: '1.2rem 1.4rem', display: 'grid', gap: '.6rem' }}>
           {row(t(theme, 'order.number'), order.orderNumber)}
           {row(t(theme, 'order.method'), order.method)}
-          {row(t(theme, 'order.paymentStatus'), order.paymentStatus)}
+          <OrderStatusLive orderNumber={order.orderNumber} label={t(theme, 'order.paymentStatus')} initialPaymentStatus={order.paymentStatus} />
           {row(t(theme, 'cart.total'), formatPrice(order.total))}
         </section>
 

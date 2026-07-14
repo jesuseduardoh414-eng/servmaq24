@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import type { PaymentMethod } from '@servmaq/types';
+import type { PaymentMethod } from '@maqserv/types';
 import { getTheme, t } from '@/lib/theme';
 import { getSessionUser } from '@/lib/session';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';

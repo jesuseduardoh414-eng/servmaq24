@@ -1,6 +1,6 @@
 import { Controller, Get, NotFoundException, Param, ParseIntPipe, Query } from '@nestjs/common';
-import { prisma } from '@servmaq/db';
-import type { VendorPublic } from '@servmaq/types';
+import { prisma } from '@maqserv/db';
+import type { VendorPublic } from '@maqserv/types';
 import { imageUrl } from '../catalog/images';
 import { ProductsService } from '../catalog/products.service';
 

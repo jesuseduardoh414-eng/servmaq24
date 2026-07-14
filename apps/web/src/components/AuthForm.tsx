@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Button, Card, Input } from '@servmaq/ui';
+import { Button, Card, Input } from '@maqserv/ui';
 
 /**
  * Formulario compartido de login/registro. Los textos llegan por props
