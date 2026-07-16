@@ -42,43 +42,5 @@ export function ActionButton({
   );
 }
 
-/** Select de estado que aplica PATCH al cambiar. */
-export function StatusSelect({
-  path,
-  field,
-  value,
-  options,
-}: {
-  path: string;
-  field: string;
-  value: string;
-  options: string[];
-}) {
-  const router = useRouter();
-  return (
-    <select
-      defaultValue={value}
-      onChange={async (e) => {
-        await fetch(`/api/admin/${path}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [field]: e.target.value }),
-        });
-        router.refresh();
-      }}
-      style={{
-        fontFamily: 'var(--font-sans)',
-        fontSize: 'var(--text-sm)',
-        color: 'var(--color-text)',
-        background: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-sm)',
-        padding: '.3em .5em',
-      }}
-    >
-      {options.map((o) => (
-        <option key={o} value={o}>{o}</option>
-      ))}
-    </select>
-  );
-}
+// StatusSelect vivía aquí: mostraba los valores crudos en inglés y solo lo usaba
+// Órdenes, que ahora trae su propio `StatusPicker` con etiquetas en español.

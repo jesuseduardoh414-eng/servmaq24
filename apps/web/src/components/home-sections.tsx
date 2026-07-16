@@ -3,7 +3,6 @@ import Image from 'next/image';
 import type { Theme } from '@maqserv/config';
 import { t, CONTENT_CACHE } from '@/lib/theme';
 import {
-  getBanners,
   getBlogs,
   getCategories,
   getFaqs,
@@ -27,7 +26,7 @@ import { HomeProductGrid } from '@/components/HomeProductGrid';
  * El orden/visibilidad lo decide theme.tokens.sections (ver page.tsx).
  */
 
-const CONTAINER: React.CSSProperties = { maxWidth: 1240, margin: '0 auto', padding: '0 26px' };
+const CONTAINER: React.CSSProperties = { maxWidth: 1240, margin: '0 auto', padding: '0 clamp(16px, 4vw, 26px)' };
 const H2: React.CSSProperties = { textTransform: 'uppercase', letterSpacing: '-.005em', margin: 0 };
 
 /** Encabezado centrado (eyebrow + título + subtítulo opcional). */
@@ -282,7 +281,10 @@ export async function WhyChooseUsSection({ theme }: { theme: Theme }) {
   ];
   return (
     <section style={{ ...CONTAINER, paddingTop: 88, paddingBottom: 88 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 56, alignItems: 'center' }}>
+      {/* `minmax(300px,…)` mantenía 2 columnas hasta muy abajo: en tablet daba
+          dos columnas de ~356px y el texto (4 razones + 3 cifras) no respiraba.
+          `.why-grid` lo apila a partir de 900px. */}
+      <div className="why-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 56, alignItems: 'center' }}>
         <div style={{ position: 'relative', minHeight: 420 }} className="why-visual">
           <div style={{ position: 'absolute', inset: 0, borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow)', background: 'var(--surface-2)' }}>
             {image ? (
@@ -292,7 +294,9 @@ export async function WhyChooseUsSection({ theme }: { theme: Theme }) {
             )}
           </div>
           {cfg?.showYearsBadge !== false ? (
-            <div style={{ position: 'absolute', right: -18, top: 44, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', boxShadow: 'var(--shadow)', animation: 'floatY 6s ease-in-out infinite' }}>
+            // `right: -18` la saca del marco a propósito (diseño). En móvil eso
+            // la dejaba fuera de la pantalla: `.why-badge` la mete al borde.
+            <div className="why-badge" style={{ position: 'absolute', right: -18, top: 44, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', boxShadow: 'var(--shadow)', animation: 'floatY 6s ease-in-out infinite' }}>
               <CountUp value={t(theme, 'home.whyChooseUs.years.num')} style={{ fontWeight: 800, fontSize: '30px', color: 'var(--color-text)' }} />
               <div style={{ fontSize: '12.5px', color: 'var(--color-text-muted)', fontWeight: 300 }}>{t(theme, 'home.whyChooseUs.years.label')}</div>
             </div>
@@ -316,7 +320,7 @@ export async function WhyChooseUsSection({ theme }: { theme: Theme }) {
             ))}
           </div>
           {cfg?.showStats !== false ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', background: statsBg, borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: '0 18px 36px -20px color-mix(in srgb, var(--color-primary) 85%, transparent)' }}>
+            <div className="why-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', background: statsBg, borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: '0 18px 36px -20px color-mix(in srgb, var(--color-primary) 85%, transparent)' }}>
               {stats.map((s, i) => (
                 <div key={s.label} style={{ padding: '22px 16px', textAlign: 'center', color: statsFg, borderRight: i < 2 ? `1px solid color-mix(in srgb, ${statsFg} 14%, transparent)` : 'none' }}>
                   <CountUp value={s.num} style={{ fontWeight: 800, fontSize: '28px', display: 'block' }} />
@@ -363,7 +367,11 @@ export async function SectorsSection({ theme }: { theme: Theme }) {
               <span style={{ position: 'absolute', left: 20, right: 20, bottom: 20, color: '#fff' }}>
                 <span style={{ display: 'block', fontFamily: 'var(--font-display)', textTransform: 'uppercase', fontSize: '16px', marginBottom: 8, letterSpacing: '.01em' }}>{s.title}</span>
                 {s.description ? (
-                  <span style={{ display: 'block', fontSize: '12.5px', color: 'rgba(255,255,255,.78)', lineHeight: 1.5, marginBottom: 12, fontWeight: 300 }}>{s.description}</span>
+                  // La tarjeta tiene alto fijo (token `cardHeight`): sin recortar,
+                  // una descripción larga empujaba el CTA fuera de la tarjeta.
+                  // Sin `display` inline: lo fija `.sector-desc` (recorte a 3
+                  // líneas), y un inline le ganaría a la clase.
+                  <span className="sector-desc" style={{ fontSize: '12.5px', color: 'rgba(255,255,255,.78)', lineHeight: 1.5, marginBottom: 12, fontWeight: 300 }}>{s.description}</span>
                 ) : null}
                 <span style={{ color: ctaColor, fontWeight: 700, fontSize: '13px' }}>{t(theme, 'home.sectors.cta')} →</span>
               </span>
@@ -455,13 +463,16 @@ export async function ReviewsSection({ theme }: { theme: Theme }) {
 /* ============================= MARCAS ============================= */
 
 export async function BrandsSection({ theme }: { theme: Theme }) {
-  const list = t(theme, 'home.brands.list').split(',').map((s) => s.trim()).filter(Boolean);
+  // Del token `brands`, que es la MISMA lista que pinta /quienes-somos. Antes esto
+  // leía el copy `home.brands.list` y las dos listas ya habían divergido.
+  const brands = theme.tokens.brands;
+  const list = brands.list.map((s) => s.trim()).filter(Boolean);
   if (list.length === 0) return null;
   const loop = [...list, ...list]; // duplicado para marquee sin costura
   return (
     <section style={{ background: 'var(--color-bg)', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', overflow: 'hidden', padding: '34px 0' }}>
       <div style={{ textAlign: 'center', marginBottom: 22, color: 'var(--grey)', fontSize: '12px', letterSpacing: '.18em', fontWeight: 700, textTransform: 'uppercase' }}>
-        {t(theme, 'home.brands.title')}
+        {brands.title}
       </div>
       <div className="marquee-mask" style={{ WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)', maskImage: 'linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)' }}>
         <div className="marquee-track" style={{ display: 'flex', gap: 26, whiteSpace: 'nowrap', alignItems: 'center' }}>
@@ -485,7 +496,8 @@ export async function FaqSection({ theme }: { theme: Theme }) {
   if (faqs.length === 0) return null;
   const accent = cfg?.accentColor ?? 'var(--color-primary)';
   return (
-    <section style={{ maxWidth: 840, margin: '0 auto', padding: '80px 26px 40px' }}>
+    // `id` para poder enlazar aquí desde Ayuda (/#faq); no hay página /faq propia.
+    <section id="faq" style={{ maxWidth: 840, margin: '0 auto', padding: '80px clamp(16px, 4vw, 26px) 40px', scrollMarginTop: 90 }}>
       <div style={{ marginBottom: 38 }}>
         <CenterHead eyebrow={t(theme, 'home.faq.eyebrow')} title={t(theme, 'home.faq.title')} eyebrowColor={cfg?.eyebrowColor ?? undefined} titleColor={cfg?.titleColor ?? undefined} />
       </div>
@@ -515,7 +527,8 @@ export async function ServicesSection({ theme }: { theme: Theme }) {
   return (
     <section style={{ ...CONTAINER, paddingTop: 60, paddingBottom: 60 }}>
       <div style={{ marginBottom: 30 }}>
-        <CenterHead eyebrow={t(theme, 'home.services.title')} title={t(theme, 'home.services.title')} />
+        {/* Mismo arreglo que en Blog: el eyebrow es su propio copy. */}
+        <CenterHead eyebrow={t(theme, 'home.services.eyebrow')} title={t(theme, 'home.services.title')} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 24 }}>
         {services.map((s) => (
@@ -534,33 +547,16 @@ export async function ServicesSection({ theme }: { theme: Theme }) {
   );
 }
 
-export async function BannersSection(_: { theme: Theme }) {
-  const banners = await getBanners();
-  const all = [...banners.top, ...banners.bottom];
-  if (all.length === 0) return null;
-  return (
-    <section style={{ ...CONTAINER, paddingTop: 40, paddingBottom: 40 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-        {all.map((b, i) => {
-          const img = (
-            <span style={{ position: 'relative', aspectRatio: '21 / 9', display: 'block', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-              <Image src={b.image} alt="" fill sizes="50vw" style={{ objectFit: 'cover' }} />
-            </span>
-          );
-          return b.link ? <a key={i} href={b.link} target="_blank" rel="noopener noreferrer">{img}</a> : <span key={i}>{img}</span>;
-        })}
-      </div>
-    </section>
-  );
-}
-
 export async function BlogSection({ theme }: { theme: Theme }) {
-  const blogs = await getBlogs(3);
+  // Cuántas entradas: configurable en el módulo Blog. Antes estaba fijo en 3.
+  const blogs = await getBlogs(theme.tokens.blog.limit);
   if (blogs.length === 0) return null;
   return (
     <section style={{ ...CONTAINER, paddingTop: 60, paddingBottom: 60 }}>
       <div style={{ marginBottom: 30 }}>
-        <CenterHead eyebrow={t(theme, 'home.blog.title')} title={t(theme, 'home.blog.title')} />
+        {/* eyebrow y título son copys DISTINTOS: pasar el mismo a los dos hacía
+            que `CenterHead` lo pintara duplicado. */}
+        <CenterHead eyebrow={t(theme, 'home.blog.eyebrow')} title={t(theme, 'home.blog.title')} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24 }}>
         {blogs.map((b) => (
@@ -580,30 +576,3 @@ export async function BlogSection({ theme }: { theme: Theme }) {
   );
 }
 
-export async function SuccessCasesSection({ theme }: { theme: Theme }) {
-  const API_URL = process.env.API_URL ?? 'http://localhost:4000';
-  const cases = (await fetch(`${API_URL}/content/success-cases`, CONTENT_CACHE)
-    .then((r) => r.json())
-    .catch(() => [])) as Array<{ id: number; client: string; review: string; image: string | null }>;
-  if (cases.length === 0) return null;
-  return (
-    <section style={{ ...CONTAINER, paddingTop: 60, paddingBottom: 60 }}>
-      <div style={{ marginBottom: 30 }}>
-        <CenterHead eyebrow={t(theme, 'home.successCases.title')} title={t(theme, 'home.successCases.title')} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24 }}>
-        {cases.map((c) => (
-          <figure key={c.id} className="lift" style={{ margin: 0, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', background: 'var(--color-surface)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-            <span style={{ position: 'relative', aspectRatio: '16 / 9', display: 'block' }}>
-              {c.image ? <Image src={c.image} alt={c.client} fill sizes="33vw" className="zoom" style={{ objectFit: 'cover' }} /> : <span className="ph zoom" style={{ position: 'absolute', inset: 0 }} />}
-            </span>
-            <div style={{ padding: 18, display: 'grid', gap: '.4rem' }}>
-              <strong>{c.client}</strong>
-              <blockquote style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '13.5px', lineHeight: 1.6, fontWeight: 300 }}>&ldquo;{c.review}&rdquo;</blockquote>
-            </div>
-          </figure>
-        ))}
-      </div>
-    </section>
-  );
-}

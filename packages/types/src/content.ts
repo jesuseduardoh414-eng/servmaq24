@@ -45,16 +45,6 @@ export interface ServiceItem {
   photo: string | null;
 }
 
-export interface BannerSlot {
-  image: string;
-  link: string | null;
-}
-
-export interface BannerSet {
-  top: BannerSlot[];
-  bottom: BannerSlot[];
-}
-
 export interface BlogCard {
   id: number;
   slug: string;

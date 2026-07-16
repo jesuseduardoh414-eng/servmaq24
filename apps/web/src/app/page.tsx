@@ -3,7 +3,6 @@ import type { Theme } from '@maqserv/config';
 import { getTheme } from '@/lib/theme';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 import {
-  BannersSection,
   BlogSection,
   BrandsSection,
   CategoriesSection,
@@ -13,7 +12,6 @@ import {
   OfferSection,
   ReviewsSection,
   SectorsSection,
-  SuccessCasesSection,
   ServicesSection,
   WhyChooseUsSection,
 } from '@/components/home-sections';
@@ -22,6 +20,9 @@ import {
  * Home con SECCIONES CONFIGURABLES: qué se muestra y en qué orden lo decide
  * `theme.tokens.sections` (editable desde el admin en F4). Las claves sin
  * componente registrado se omiten sin romper.
+ *
+ * Retiradas (jul 2026): `home.success-cases` (el cliente decidió no incluir el
+ * módulo) y `home.banners` (legacy; su editor ya se había quitado del menú).
  */
 const SECTIONS: Record<string, (props: { theme: Theme }) => Promise<ReactNode> | ReactNode> = {
   'home.hero': Hero,
@@ -32,10 +33,8 @@ const SECTIONS: Record<string, (props: { theme: Theme }) => Promise<ReactNode> |
   'home.offer': OfferSection,
   'home.brands': BrandsSection,
   'home.services': ServicesSection,
-  'home.banners': BannersSection,
   'home.blog': BlogSection,
   'home.reviews': ReviewsSection,
-  'home.success-cases': SuccessCasesSection,
   'home.faq': FaqSection,
 };
 

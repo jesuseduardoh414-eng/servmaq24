@@ -10,6 +10,13 @@ export class CatalogController {
     private readonly categories: CategoriesService,
   ) {}
 
+  /** Un número de query string solo si es válido: un `?minPrice=abc` no debe filtrar nada. */
+  private static num(v: string | undefined): number | undefined {
+    if (v === undefined || v === '') return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? n : undefined;
+  }
+
   @Get('products')
   listProducts(
     @Query('page') page?: string,
@@ -17,13 +24,26 @@ export class CatalogController {
     @Query('category') category?: string,
     @Query('subcategory') subcategory?: string,
     @Query('featured') featured?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
+    @Query('minRating') minRating?: string,
+    @Query('availability') availability?: string,
+    @Query('sort') sort?: string,
   ) {
+    // Valores fuera de catálogo se ignoran (no se filtra por basura de la URL).
+    const avail = availability === 'now' || availability === 'rent' || availability === 'offer' ? availability : undefined;
+    const order = sort === 'low' || sort === 'high' || sort === 'new' ? sort : undefined;
     return this.products.list({
       page: page ? Number(page) : undefined,
       search: search || undefined,
       category: category || undefined,
       subcategory: subcategory || undefined,
       featured: featured === '1' || featured === 'true',
+      minPrice: CatalogController.num(minPrice),
+      maxPrice: CatalogController.num(maxPrice),
+      minRating: CatalogController.num(minRating),
+      availability: avail,
+      sort: order,
     });
   }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ADMIN_COOKIE, ADMIN_REFRESH_COOKIE, API_URL } from '@/lib/admin';
+import { clientIpHeaders } from '@/lib/client-ip';
 
 /**
  * Proxy del admin: login escribe la cookie httpOnly; el resto reenvía a
@@ -7,6 +8,13 @@ import { ADMIN_COOKIE, ADMIN_REFRESH_COOKIE, API_URL } from '@/lib/admin';
  */
 async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const { path } = await ctx.params;
+
+  // Todo lo de aquí sale con el prefijo `/admin/`; un `..` lo dejaría salirse de él
+  // (`admin/../auth/login`). No hay escalada —fuera de /admin solo hay endpoints
+  // públicos— pero la ruta que se envía debe ser la que se ve.
+  if (path.some((seg) => seg === '.' || seg === '..' || seg.includes('\\') || seg.includes('%2e') || seg.includes('%2E'))) {
+    return NextResponse.json({ message: 'Ruta no permitida' }, { status: 404 });
+  }
   const joined = path.join('/');
 
   if (joined === 'logout') {
@@ -17,7 +25,10 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
   }
 
   const token = req.cookies.get(ADMIN_COOKIE)?.value;
-  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+  const headers: Record<string, string> = {
+    ...clientIpHeaders(req),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
   const init: RequestInit = { method: req.method, headers };
   if (req.method !== 'GET' && req.method !== 'DELETE') {
     headers['Content-Type'] = req.headers.get('content-type') ?? 'application/json';

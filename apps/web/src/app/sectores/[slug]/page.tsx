@@ -10,7 +10,7 @@ import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 
 type Params = { slug: string };
 
-const CONTAINER: React.CSSProperties = { maxWidth: 1240, margin: '0 auto', padding: '0 26px' };
+const CONTAINER: React.CSSProperties = { maxWidth: 1240, margin: '0 auto', padding: '0 clamp(16px, 4vw, 26px)' };
 const GOLD = 'color-mix(in srgb, var(--color-primary) 82%, #000)';
 const INK = 'var(--color-secondary)';
 

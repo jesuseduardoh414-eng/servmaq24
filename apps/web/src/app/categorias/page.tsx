@@ -6,7 +6,7 @@ import { getCategories } from '@/lib/api';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 import { Band } from '@/components/Band';
 
-const CONTAINER: React.CSSProperties = { maxWidth: 1240, margin: '0 auto', padding: '0 26px' };
+const CONTAINER: React.CSSProperties = { maxWidth: 1240, margin: '0 auto', padding: '0 clamp(16px, 4vw, 26px)' };
 // Panel claro para la imagen de tarjeta: normaliza fotos de maquinaria con
 // fondos distintos (unas en blanco, otras transparentes) y da el look de catálogo.
 const PANEL = 'linear-gradient(160deg, #f6f7f9 0%, #e7e9ee 100%)';

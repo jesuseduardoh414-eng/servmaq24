@@ -19,7 +19,8 @@ export function MainNav({ items }: { items: NavItem[] }) {
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, fontSize: '14.5px', fontWeight: 600, flex: 1, flexWrap: 'wrap' }}>
+    // `hdr-nav`: debajo de 1024px la oculta el CSS y manda el drawer (MobileNav).
+    <nav className="hdr-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, fontSize: '14.5px', fontWeight: 600, flex: 1, flexWrap: 'wrap' }}>
       {items.map((item) => {
         const active = isActive(item.href);
         return (

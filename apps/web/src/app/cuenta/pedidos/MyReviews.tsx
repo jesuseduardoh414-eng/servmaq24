@@ -71,13 +71,14 @@ export function MyReviews({ title }: { title: string }) {
   if (list === null) return null; // cargando: no mostrar nada
   if (list.length === 0) return null; // sin compras que reseñar
 
-  const card: React.CSSProperties = { border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-surface)', padding: '1rem 1.2rem', display: 'grid', gap: '.7rem' };
+  const card: React.CSSProperties = { border: '1px solid var(--color-border)', borderRadius: 4, background: 'var(--color-surface)', padding: '1rem 1.2rem', display: 'grid', gap: '.7rem' };
   const inputStyle: React.CSSProperties = { width: '100%', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg)', color: 'var(--color-text)', padding: '10px 12px', fontFamily: 'inherit', fontSize: '14.5px', lineHeight: 1.5, resize: 'vertical' };
 
   return (
-    <section style={{ marginTop: '2.4rem' }}>
-      <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: '.4rem' }}>{title}</h2>
-      <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)', margin: '0 0 1.1rem' }}>Comparte tu experiencia con los equipos que rentaste o compraste — se muestran en el producto y en el sitio.</p>
+    // Mismo lenguaje que el listado de pedidos de arriba.
+    <section style={{ marginTop: 48, borderTop: '2px solid var(--color-text)', paddingTop: 26 }}>
+      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', margin: '0 0 6px' }}>{title}</h2>
+      <p style={{ color: 'var(--color-text-muted)', fontSize: 14, margin: '0 0 18px', lineHeight: 1.6 }}>Comparte tu experiencia con los equipos que rentaste o compraste — se muestran en el producto y en el sitio.</p>
       <div style={{ display: 'grid', gap: '.8rem' }}>
         {list.map((p) => {
           const isEditing = editing === p.productId;

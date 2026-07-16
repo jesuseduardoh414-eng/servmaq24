@@ -123,7 +123,23 @@ export function ReviewsBoard({ initial }: { initial: Review[] }) {
   return (
     <div style={{ fontFamily: FONT, color: C.text }}>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Archivo:wght@700;800;900&display=swap" />
-      <style>{`.rev-row:hover{background:#191E27 !important;} .act-btn:hover{background:#232833 !important;} @media(max-width:1080px){.rev-metrics{grid-template-columns:1fr 1fr !important;}} @media(max-width:620px){.rev-metrics{grid-template-columns:1fr !important;}}`}</style>
+      <style>{`
+        .rev-row:hover{ background:#191E27 !important; }
+        .act-btn:hover{ background:#232833 !important; }
+        @media(max-width:1080px){ .rev-metrics{ grid-template-columns:1fr 1fr !important; } }
+        @media(max-width:620px){ .rev-metrics{ grid-template-columns:1fr !important; } }
+        /* Las 7 columnas no caben en móvil: cada reseña pasa a tarjeta
+           (selector + autor arriba, reseña completa debajo, acciones al pie). */
+        @media (max-width: 900px) {
+          .rev-head { display:none !important; }
+          .rev-row { display:flex !important; flex-wrap:wrap; align-items:center; gap:10px 12px !important; padding:16px !important; }
+          .rev-row > .rev-c-sel { flex:0 0 auto; }
+          .rev-row > .rev-c-author { flex:1 1 calc(100% - 36px); }
+          .rev-row > .rev-c-text { flex:1 0 100%; }
+          .rev-row > .rev-c-stars, .rev-row > .rev-c-date, .rev-row > .rev-c-state { flex:0 0 auto; }
+          .rev-row > .rev-c-actions { flex:1 0 100%; }
+        }
+      `}</style>
 
       {/* título */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, marginBottom: 24, flexWrap: 'wrap' }}>
@@ -168,7 +184,7 @@ export function ReviewsBoard({ initial }: { initial: Review[] }) {
 
       {/* toolbar: tabs + búsqueda */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 4, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 12, padding: 4 }}>
+        <div style={{ display: 'flex', gap: 4, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 12, padding: 4, flexWrap: 'wrap', maxWidth: '100%' }}>
           {([['todas', 'Todas', total], ['pend', 'Pendientes', pending], ['aprob', 'Aprobadas', approved]] as const).map(([id, label, count]) => {
             const on = tab === id;
             return (
@@ -198,7 +214,7 @@ export function ReviewsBoard({ initial }: { initial: Review[] }) {
 
       {/* tabla */}
       <div style={{ background: C.table, border: `1px solid ${C.cardBorder}`, borderRadius: 16, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 16, alignItems: 'center', padding: '14px 22px', borderBottom: `1px solid ${C.cardBorder}`, background: C.head }}>
+        <div className="rev-head" style={{ display: 'grid', gridTemplateColumns: GRID, gap: 16, alignItems: 'center', padding: '14px 22px', borderBottom: `1px solid ${C.cardBorder}`, background: C.head }}>
           <button type="button" onClick={toggleAll} aria-label="Seleccionar todo" style={box(allSelected)}>{allSelected ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16202E" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg> : null}</button>
           <span style={th}>Autor</span><span style={th}>Calificación</span><span style={th}>Reseña</span><span style={th}>Fecha</span><span style={th}>Estado</span><span style={{ ...th, textAlign: 'right' }}>Acciones</span>
         </div>
@@ -214,8 +230,8 @@ export function ReviewsBoard({ initial }: { initial: Review[] }) {
           const on = !!sel[r.id];
           return (
             <div key={r.id} className="rev-row" style={{ display: 'grid', gridTemplateColumns: GRID, gap: 16, alignItems: 'center', padding: '16px 22px', borderBottom: `1px solid ${C.rowBorder}`, transition: 'background .12s' }}>
-              <button type="button" onClick={() => setSel((s) => ({ ...s, [r.id]: !s[r.id] }))} aria-label="Seleccionar" style={box(on)}>{on ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16202E" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg> : null}</button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+              <button type="button" onClick={() => setSel((s) => ({ ...s, [r.id]: !s[r.id] }))} className="rev-c-sel" aria-label="Seleccionar" style={box(on)}>{on ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16202E" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg> : null}</button>
+              <div className="rev-c-author" style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <span style={{ width: 38, height: 38, flexShrink: 0, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 800, color: '#16202E', background: AVATAR[r.id % AVATAR.length] }}>{initials(r.author)}</span>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -225,11 +241,11 @@ export function ReviewsBoard({ initial }: { initial: Review[] }) {
                   <div style={{ fontSize: 12, color: C.muted2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.product}</div>
                 </div>
               </div>
-              <Stars n={Math.max(0, Math.min(5, r.rating))} />
-              <div style={{ fontSize: 14, color: C.textSoft, lineHeight: 1.45, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{r.review}</div>
-              <div style={{ fontSize: 13, color: C.muted }}>{fmtDate(r.createdAt)}</div>
-              <div><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, padding: '5px 12px', borderRadius: 999, color: meta.color, background: meta.bg }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: meta.color }} />{meta.label}</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+              <span className="rev-c-stars"><Stars n={Math.max(0, Math.min(5, r.rating))} /></span>
+              <div className="rev-c-text" style={{ fontSize: 14, color: C.textSoft, lineHeight: 1.45, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{r.review}</div>
+              <div className="rev-c-date" style={{ fontSize: 13, color: C.muted }}>{fmtDate(r.createdAt)}</div>
+              <div className="rev-c-state"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, padding: '5px 12px', borderRadius: 999, color: meta.color, background: meta.bg }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: meta.color }} />{meta.label}</span></div>
+              <div className="rev-c-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
                 <button type="button" className="act-btn" onClick={() => setStatus(r.id, 1)} aria-label="Aprobar" title="Aprobar" style={act(C.green)}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg></button>
                 <button type="button" className="act-btn" onClick={() => setStatus(r.id, 0)} aria-label="Ocultar" title="Ocultar" style={act(C.muted)}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M17.9 17.9A10 10 0 0 1 12 20C5 20 1 12 1 12a18 18 0 0 1 5.1-5.9M9.9 4.2A10 10 0 0 1 12 4c7 0 11 8 11 8a18 18 0 0 1-2.2 3.2M1 1l22 22" /></svg></button>
                 <button type="button" className="act-btn" onClick={() => remove(r.id)} aria-label="Eliminar" title="Eliminar" style={act(C.red)}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>

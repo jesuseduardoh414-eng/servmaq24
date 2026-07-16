@@ -5,7 +5,9 @@ import type { VendorOrderRow } from '@maqserv/types';
 import { getTheme, t } from '@/lib/theme';
 import { SESSION_COOKIE } from '@/lib/session';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
+import { orderStatusLabel } from '@/lib/order-status';
 import { formatPrice } from '@/lib/format';
+import { Badge, DISPLAY, MONO, VendorHeader, VendorMain, cardStyle, eyebrowStyle } from '../vendor-kit';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -27,38 +29,60 @@ export default async function VendorOrdersPage() {
   if (res.status === 403) redirect('/vendedor');
   const orders = (await res.json().catch(() => [])) as VendorOrderRow[];
 
+  const total = orders.reduce((s, o) => s + o.price, 0);
+
   return (
     <>
       <SiteHeader theme={theme} />
-      <main style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem' }}>
-        <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: '1.4rem' }}>{t(theme, 'vendor.panel.orders')}</h1>
+      <VendorMain>
+        <VendorHeader
+          title={t(theme, 'vendor.orders.title')}
+          aside={
+            <span style={{ fontFamily: MONO, fontSize: 13, color: 'var(--color-text-muted)' }}>
+              {orders.length} VENTA{orders.length === 1 ? '' : 'S'}
+            </span>
+          }
+          back={{ href: '/vendedor', label: t(theme, 'vendor.back') }}
+        />
+
         {orders.length === 0 ? (
-          <p style={{ color: 'var(--color-text-muted)' }}>{t(theme, 'vendor.orders.empty')}</p>
-        ) : (
-          <div style={{ display: 'grid', gap: '.7rem' }}>
-            {orders.map((o) => (
-              <div
-                key={o.id}
-                style={{
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--color-surface)',
-                  padding: '1rem 1.2rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <span><strong>{o.orderNumber}</strong> · ×{o.qty} · {o.status}</span>
-                <strong style={{ color: 'var(--color-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                  {formatPrice(o.price)}
-                </strong>
-              </div>
-            ))}
+          <div style={{ ...cardStyle, padding: '56px 24px', textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: 15.5, color: 'var(--color-text-muted)' }}>{t(theme, 'vendor.orders.empty')}</p>
           </div>
+        ) : (
+          <>
+            <section style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+              <div style={eyebrowStyle}>Total vendido</div>
+              <div style={{ fontFamily: MONO, fontSize: 26, fontWeight: 700, color: 'var(--color-primary)' }}>{formatPrice(total)}</div>
+            </section>
+
+            <div style={{ display: 'grid', gap: 12 }}>
+              {orders.map((o) => {
+                // `vendor_orders.status` usa el MISMO enum que las órdenes
+                // (pending|processing|completed|declined): se traduce igual, no se
+                // pinta crudo en inglés como antes.
+                const st = orderStatusLabel(o.status);
+                return (
+                  <div key={o.id} className="vn-card" style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: MONO, fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>{o.orderNumber}</div>
+                      <div style={{ fontFamily: MONO, fontSize: 11.5, color: 'var(--color-text-muted)', marginTop: 5, letterSpacing: '0.04em' }}>
+                        {o.qty} {o.qty === 1 ? 'PIEZA' : 'PIEZAS'}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <Badge text={st.text} tone={st.tone} />
+                      <strong style={{ fontFamily: DISPLAY, fontSize: 21, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--color-text)' }}>
+                        {formatPrice(o.price)}
+                      </strong>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
-      </main>
+      </VendorMain>
       <SiteFooter theme={theme} />
     </>
   );

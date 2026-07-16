@@ -19,36 +19,49 @@ export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
   constructor(private readonly orders: OrdersService) {}
 
-  private get mpClient(): MercadoPagoConfig | null {
-    const token = process.env.MP_ACCESS_TOKEN;
+  /** Token de MercadoPago: primero el guardado en el panel, si no el de entorno. */
+  private async mpToken(): Promise<string | null> {
+    const gw = await prisma.payment_gateways.findFirst({ where: { code: 'mercadopago' } });
+    const fromDb = gw?.secret?.trim();
+    return fromDb || process.env.MP_ACCESS_TOKEN || null;
+  }
+
+  private async mpClient(): Promise<MercadoPagoConfig | null> {
+    const token = await this.mpToken();
     return token ? new MercadoPagoConfig({ accessToken: token }) : null;
   }
 
+  /** Métodos habilitados (Panel → Pagos). Nunca expone `secret`. */
   async methods(): Promise<PaymentMethod[]> {
-    // El título/instrucciones de transferencia salen del gateway legacy (editable en admin)
-    const gw = await prisma.payment_gateways.findFirst({ where: { status: 1 } });
+    const rows = await prisma.payment_gateways.findMany();
+    const byCode = new Map(rows.map((r) => [r.code, r]));
+    const transfer = byCode.get('transferencia');
+    const mp = byCode.get('mercadopago');
+    const mpToken = (mp?.secret?.trim() || process.env.MP_ACCESS_TOKEN || '').trim();
+
     return [
       {
         id: 'transferencia',
-        title: gw?.title ?? 'Transferencia bancaria',
-        instructions: gw?.text ?? null,
-        available: true,
+        title: transfer?.title ?? 'Transferencia bancaria',
+        instructions: transfer?.text ?? null,
+        available: (transfer?.status ?? 1) === 1,
       },
       {
         id: 'mercadopago',
-        title: 'MercadoPago',
-        instructions: null,
-        available: this.mpClient !== null,
+        title: mp?.title ?? 'MercadoPago',
+        instructions: mp?.text ?? null,
+        // Solo disponible si está activo Y tiene credencial configurada.
+        available: (mp?.status ?? 0) === 1 && mpToken.length > 0,
       },
     ];
   }
 
   /** Crea la preferencia de Checkout Pro y devuelve la URL de redirección. */
   async createMercadoPagoRedirect(order: OrderSummary): Promise<string> {
-    const client = this.mpClient;
+    const client = await this.mpClient();
     if (!client) {
       throw new ServiceUnavailableException(
-        'MercadoPago no está configurado (falta MP_ACCESS_TOKEN)',
+        'MercadoPago no está configurado (falta la credencial en Panel → Pagos)',
       );
     }
 
@@ -84,7 +97,7 @@ export class PaymentsService {
    * confiar en el payload) y marca la orden pagada si está aprobado.
    */
   async handleMercadoPagoWebhook(query: Record<string, unknown>, body: unknown): Promise<{ ok: boolean }> {
-    const client = this.mpClient;
+    const client = await this.mpClient();
     if (!client) return { ok: false };
 
     const b = (body ?? {}) as { type?: string; data?: { id?: string } };

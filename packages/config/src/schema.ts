@@ -226,8 +226,7 @@ export const quienesSomosSchema = z
     ]),
     ventajasEyebrow: z.string().default('Ventajas'),
     ventajasTitle: z.string().default('Por qué elegirnos'),
-    brandsEyebrow: z.string().default('Trabajamos con las marcas líderes de la industria'),
-    brands: z.array(z.string()).default(['CAT', 'KOMATSU', 'KUBOTA', 'JCB', 'VOLVO', 'BOBCAT']),
+    // Las marcas se movieron al token `brands` (fuente única compartida con el home).
     ctaTitle: z.string().default('¿Listo para poner tu obra en marcha?'),
     ctaSubtitle: z.string().default('Cotiza la maquinaria que tu proyecto necesita. Entrega en obra, equipos certificados y asesoría de nuestros especialistas.'),
     ctaPrimary: z.string().default('Solicitar cotización'),
@@ -258,6 +257,32 @@ export const sectorsSchema = z
  * Los textos (badge/título/subtítulo/cta) viven en copys; esto controla imagen,
  * enlace, colores y visibilidad. Colores null ⇒ heredan del tema.
  */
+/** Sección Blog del home (`home.blog`). Las entradas se gestionan en el módulo Blog. */
+export const blogSchema = z
+  .object({
+    /** Cuántas entradas se adelantan en el home. Estaba fijo en 3 dentro del código. */
+    limit: z.number().int().min(1).max(12).default(3),
+  })
+  .default({});
+
+/**
+ * Banda de marcas (`home.brands`) y el mismo listado en /quienes-somos.
+ *
+ * FUENTE ÚNICA a propósito. Antes había DOS listas que ya habían divergido: el home
+ * leía el copy `home.brands.list` ("CAT, Komatsu, Volvo CE, JCB, Yale, Bobcat") y
+ * /quienes-somos el token `quienesSomos.brands` (que seguía con los defaults:
+ * "…KUBOTA…VOLVO…"). El sitio decía dos cosas distintas según la página.
+ */
+export const brandsSchema = z
+  .object({
+    /** Encabezado de la banda del home. */
+    title: z.string().default('Marcas con las que trabajamos'),
+    /** Encabezado del mismo listado en /quienes-somos. */
+    eyebrow: z.string().default('Trabajamos con las marcas líderes de la industria'),
+    list: z.array(z.string()).default(['CAT', 'KOMATSU', 'KUBOTA', 'JCB', 'VOLVO', 'BOBCAT']),
+  })
+  .default({});
+
 export const offerSchema = z
   .object({
     show: z.boolean().default(true),
@@ -344,6 +369,7 @@ export const contactSchema = z
     whatsapp: z.string().default('833 224 56 78'),
     email: z.string().default('info@maqserv24.com'),
     hours: z.string().default('Lun–Sáb · 8:00–18:00'),
+    address: z.string().default(''), // dirección principal / origen del cálculo de fletes
     urgent: contactUrgentSchema.default({}),
     needs: z.array(z.string()).default(['Rentar equipo', 'Cotización', 'Soporte técnico', 'Otro']),
     branches: z.array(contactBranchSchema).default([
@@ -371,19 +397,13 @@ export const footerSchema = z
       { title: 'Empresa', links: [
         { label: 'Quiénes somos', href: '/quienes-somos' },
         { label: 'Blog', href: '/blog' },
-        { label: 'Vacantes', href: '/contacto' },
-        { label: 'Prensa', href: '/contacto' },
       ] },
-      { title: 'Productos', links: [
-        { label: 'Centro de ayuda', href: '/contacto' },
+      { title: 'Catálogo', links: [
         { label: 'Productos', href: '/productos' },
-        { label: 'Sectores estratégicos', href: '/productos' },
+        { label: 'Categorías', href: '/categorias' },
       ] },
       { title: 'Ayuda', links: [
-        { label: 'Centro de ayuda', href: '/contacto' },
         { label: 'Rastrear pedido', href: '/rastreo' },
-        { label: 'Devoluciones', href: '/contacto' },
-        { label: 'Garantías', href: '/contacto' },
         { label: 'Contacto', href: '/contacto' },
       ] },
     ]),
@@ -394,6 +414,85 @@ export const footerSchema = z
       { label: 'wa', href: '' },
     ]),
     copyright: z.string().default(''), // vacío ⇒ "© {año} {marca}. Todos los derechos reservados."
+  })
+  .default({});
+
+/** Contenido legal editable (Términos y Privacidad). Vacío ⇒ el sitio usa LEGAL_DEFAULTS. */
+export const legalSectionSchema = z.object({ h: z.string().default(''), body: z.string().default('') });
+export const legalDocSchema = z
+  .object({
+    updated: z.string().default(''),
+    intro: z.string().default(''),
+    sections: z.array(legalSectionSchema).default([]),
+  })
+  .default({});
+export const legalSchema = z
+  .object({
+    terms: legalDocSchema,
+    privacy: legalDocSchema,
+  })
+  .default({});
+
+/**
+ * Ajustes de cobro del checkout (editables en el panel → Pagos).
+ * Son públicos (el carrito los necesita para mostrar el desglose) y el servidor
+ * los usa como fuente de verdad al crear la orden. NO poner secretos aquí.
+ */
+export const checkoutTaxSchema = z.object({
+  enabled: z.boolean().default(false), // por defecto apagado: hoy la orden no cobra IVA
+  rate: z.number().min(0).max(100).default(16), // porcentaje
+  label: z.string().default('IVA'),
+  /** true = los precios ya incluyen impuesto (solo se desglosa, no se suma). */
+  included: z.boolean().default(false),
+});
+export const checkoutOperatorSchema = z.object({
+  enabled: z.boolean().default(true), // mostrar la opción en el carrito
+  amount: z.number().min(0).default(8000), // por equipo, por periodo
+  label: z.string().default('Incluir operador certificado'),
+  help: z.string().default('Operador con seguro y viáticos por equipo.'),
+});
+/**
+ * Traslado (Panel → Traslado). Se cotiza por la distancia entre la base
+ * (Diseño → Contacto) y la ubicación del cliente.
+ * `mode: 'quote'` por defecto = se muestra "A cotizar" y NO se cobra, igual que
+ * hoy; el cliente define su tarifa en el panel y cambia a 'km' cuando quiera cobrarlo.
+ */
+export const checkoutFreightSchema = z.object({
+  enabled: z.boolean().default(true),
+  /** 'km' = por distancia · 'flat' = tarifa única · 'quote' = solo mostrar "A cotizar". */
+  mode: z.enum(['km', 'flat', 'quote']).default('quote'),
+  /** Tarifa por kilómetro. Un producto con `rental_freight` usa la suya en vez de esta. */
+  ratePerKm: z.number().min(0).default(35),
+  /** Cargo de salida, se suma una vez por pedido. */
+  base: z.number().min(0).default(0),
+  /** Kilómetros sin costo (radio local). */
+  freeKm: z.number().min(0).default(0),
+  /** Cobro mínimo del traslado. */
+  minCharge: z.number().min(0).default(0),
+  /** Fuera de este radio se manda a cotización manual. 0 = sin límite. */
+  maxKm: z.number().min(0).default(300),
+  /** Cobrar ida y vuelta (×2 los km). */
+  roundTrip: z.boolean().default(true),
+  /** true = cobrar el traslado por cada equipo; false = un solo viaje por pedido. */
+  perUnit: z.boolean().default(false),
+  /** Solo cobrar traslado en equipos de renta (los de venta no lo pagan). */
+  rentalOnly: z.boolean().default(true),
+  /** Tarifa única cuando `mode: 'flat'`. */
+  flatAmount: z.number().min(0).default(0),
+  label: z.string().default('Traslado'),
+  help: z.string().default('Se calcula por la distancia desde nuestra base hasta tu ubicación.'),
+  /** Texto cuando no se puede calcular (sin dirección, fuera de rango o modo 'quote'). */
+  quoteText: z.string().default('A cotizar'),
+  /** Origen del viaje. Vacío = usa la dirección de Diseño → Contacto. */
+  origin: z.string().default(''),
+});
+export const checkoutSchema = z
+  .object({
+    tax: checkoutTaxSchema.default({}),
+    operator: checkoutOperatorSchema.default({}),
+    freight: checkoutFreightSchema.default({}),
+    /** Nota bajo el botón de pago (p. ej. condiciones del traslado). */
+    note: z.string().default('El traslado se cotiza según ubicación.'),
   })
   .default({});
 
@@ -423,6 +522,10 @@ export const themeTokensSchema = z.object({
   quienesSomos: quienesSomosSchema,
   /** Ajustes de la Sección 5 · Sectores estratégicos (home). */
   sectors: sectorsSchema,
+  /** Banda de marcas del home + el listado de /quienes-somos (una sola lista). */
+  brands: brandsSchema,
+  /** Sección Blog del home. */
+  blog: blogSchema,
   /** Ajustes de la Sección 6 · Oferta / Promoción (home). */
   offer: offerSchema,
   /** Ajustes de la Sección 7 · Reseñas (home). */
@@ -433,6 +536,10 @@ export const themeTokensSchema = z.object({
   contact: contactSchema,
   /** Pie de página (footer): boletín, columnas, redes y copyright. */
   footer: footerSchema,
+  /** Contenido legal editable (Términos y Condiciones + Aviso de Privacidad). */
+  legal: legalSchema,
+  /** Cobro del checkout: IVA y cargo de operador (editable en Pagos). */
+  checkout: checkoutSchema,
   /** Modo Cotización B2B: oculta precios y carrito, muestra CTA de cotización. */
   quoteMode: z.boolean(),
   /** Modo de color por defecto del sitio: 'auto' sigue al SO; el usuario puede
@@ -469,12 +576,22 @@ export type WhyChooseUs = z.infer<typeof whyChooseUsSchema>;
 export type QuienesSomos = z.infer<typeof quienesSomosSchema>;
 export type Sectors = z.infer<typeof sectorsSchema>;
 export type Offer = z.infer<typeof offerSchema>;
+export type Brands = z.infer<typeof brandsSchema>;
+export type BlogSectionConfig = z.infer<typeof blogSchema>;
 export type Reviews = z.infer<typeof reviewsSchema>;
 export type Faq = z.infer<typeof faqSchema>;
 export type Contact = z.infer<typeof contactSchema>;
 export type ContactStat = z.infer<typeof contactStatSchema>;
 export type ContactBranch = z.infer<typeof contactBranchSchema>;
 export type Footer = z.infer<typeof footerSchema>;
+export type CheckoutConfig = z.infer<typeof checkoutSchema>;
+export type CheckoutTax = z.infer<typeof checkoutTaxSchema>;
+export type CheckoutOperator = z.infer<typeof checkoutOperatorSchema>;
+export type CheckoutFreight = z.infer<typeof checkoutFreightSchema>;
+export type FreightMode = CheckoutFreight['mode'];
+export type LegalContent = z.infer<typeof legalSchema>;
+export type LegalDoc = z.infer<typeof legalDocSchema>;
+export type LegalSectionToken = z.infer<typeof legalSectionSchema>;
 export type FooterColumn = z.infer<typeof footerColumnSchema>;
 export type FooterLink = z.infer<typeof footerLinkSchema>;
 export type FooterSocial = z.infer<typeof footerSocialSchema>;

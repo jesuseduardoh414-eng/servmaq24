@@ -27,8 +27,17 @@ export interface MedicalInfo {
   certificacionDc3: string | null;
 }
 
+export interface ProductSpec {
+  label: string;
+  value: string;
+}
+
 export interface ProductDetail extends ProductCard {
   description: string;
+  /** Resumen corto (columna legacy `Corto`); null si vacío. */
+  short: string | null;
+  /** Ficha técnica: pares etiqueta/valor. */
+  specs: ProductSpec[];
   gallery: string[];
   medical: MedicalInfo;
   rentalFreight: number | null;

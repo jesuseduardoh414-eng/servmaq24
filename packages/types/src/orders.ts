@@ -4,6 +4,8 @@
  * el cliente solo manda productId + qty.
  */
 
+import type { Fulfillment, ShipMethod } from './fulfillment';
+
 export type PaymentMethodId = 'transferencia' | 'mercadopago';
 
 export interface PaymentMethod {
@@ -15,12 +17,14 @@ export interface PaymentMethod {
   available: boolean;
 }
 
+/** Periodo de renta: el servidor deriva el precio del mensual del producto. */
+export type RentalPeriod = 'dia' | 'sem' | 'mes';
+
 export interface CheckoutItemInput {
   productId: number;
   qty: number;
-  /** Renta (brief Hito 4): rango de fechas; el server calcula días y flete. */
-  startDate?: string; // YYYY-MM-DD
-  endDate?: string;   // YYYY-MM-DD (fecha de retorno)
+  /** Renta: periodo elegido (día/semana/mes). Default 'mes'. */
+  period?: RentalPeriod;
 }
 
 export interface CheckoutInput {
@@ -28,6 +32,8 @@ export interface CheckoutInput {
   method: PaymentMethodId;
   /** Cupón opcional; el descuento lo calcula y aplica el servidor. */
   couponCode?: string;
+  /** Agregar operador certificado (monto configurable en Panel → Pagos). */
+  operator?: boolean;
   customer: {
     name: string;
     email: string;
@@ -41,16 +47,14 @@ export interface CheckoutInput {
 
 export interface OrderItem {
   productId: number;
-  name: string;
-  /** Unitario; en renta es el precio POR DÍA. */
+  /** Unitario ya ajustado al periodo elegido (renta) o precio de venta. */
   price: number;
+  name: string;
   qty: number;
   image: string | null;
-  /** Solo renta: */
-  days?: number;
-  startDate?: string;
-  endDate?: string;
-  freight?: number; // flete unitario aplicado
+  /** Solo renta: periodo cobrado y su etiqueta ("MES"/"SEMANA"/"DÍA"). */
+  period?: RentalPeriod;
+  unitLabel?: string;
 }
 
 export interface OrderSummary {
@@ -64,9 +68,72 @@ export interface OrderSummary {
   createdAt: string | null;
 }
 
+/**
+ * Desglose CONGELADO al crear la orden: es lo que se cobró, no se recalcula.
+ * null en órdenes del sistema viejo (cart comprimido en bzip2).
+ */
+export interface OrderTotals {
+  subtotal: number;
+  discount: number;
+  operator: number;
+  /** 0 si el traslado se cotiza aparte; entonces `freightNote` dice por qué. */
+  freight: number;
+  freightKm: number | null;
+  freightLabel: string;
+  freightNote: string;
+  /** Monto AGREGADO (0 si el precio ya incluye impuesto). */
+  tax: number;
+  taxRate: number;
+  taxLabel: string;
+  taxIncluded: boolean;
+  total: number;
+}
+
+/**
+ * Estado y datos del ENVÍO de una orden (módulo de envíos).
+ * Los campos se llenan según `method`: guía la paquetería, unidad el traslado,
+ * sucursal la recolección. Lo demás queda null.
+ */
+export interface OrderShipping {
+  state: Fulfillment;
+  method: ShipMethod | null;
+  /** Paquetería (solo `method: 'paqueteria'`). */
+  carrier: string | null;
+  /** Número de guía (solo `method: 'paqueteria'`). */
+  tracking: string | null;
+  /** Unidad y operador (solo `method: 'traslado'`). */
+  unit: string | null;
+  /** Sucursal de recolección (solo `method: 'sucursal'`). */
+  branch: string | null;
+  /** Fecha comprometida de entrega/recolección. */
+  scheduledAt: string | null;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  /** Solo renta: cuándo se recogió el equipo. */
+  returnedAt: string | null;
+  /** Indicaciones visibles para el cliente. */
+  notes: string | null;
+}
+
+/** Un cambio de estado del envío (tabla `order_events`). Del más viejo al más nuevo. */
+export interface OrderEvent {
+  id: number;
+  from: Fulfillment | null;
+  to: Fulfillment;
+  note: string | null;
+  /** Nombre del admin; null = automático (webhook de pago). */
+  by: string | null;
+  at: string;
+}
+
 export interface OrderDetail extends OrderSummary {
   /** Vacío para órdenes del sistema viejo (cart comprimido bzip2). */
   items: OrderItem[];
+  totals: OrderTotals | null;
+  /** Envío. null solo si la orden es anterior al módulo y nunca se tocó. */
+  shipping: OrderShipping | null;
+  /** Lleva equipo en renta ⇒ el flujo incluye "En renta → Recolectado". */
+  hasRental: boolean;
   customer: {
     name: string | null;
     email: string | null;

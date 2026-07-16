@@ -17,13 +17,18 @@ export default async function ContactDesignPage() {
   const detail = active ? await adminFetch<ThemeDetail>(`/admin/themes/${active.id}`) : null;
   const tokens = detail?.tokens ? themeTokensSchema.parse(detail.tokens) : defaultTheme.tokens;
 
+  // Si el token aún no tiene dirección, la traemos de la legacy (origen de fletes)
+  // para que la migración desde Ajustes sea transparente.
+  const settings = await adminFetch<{ street?: string | null }>('/admin/cms/settings').catch(() => null);
+  const contact = { ...tokens.contact, address: tokens.contact.address || (settings?.street ?? '') };
+
   return (
     <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <ContactEditor
         themeId={active?.id ?? null}
         copys={detail?.copys ?? { es: {} }}
         tokens={tokens}
-        contact={tokens.contact}
+        contact={contact}
       />
     </AdminShell>
   );

@@ -8,8 +8,17 @@ services:
   - type: web
     name: servmaq-api
     runtime: node
-    region: oregon          # cámbialo a la región más cercana a tus usuarios
-    plan: free              # el plan free "duerme" tras inactividad; sube a "starter" para producción
+    # REGIÓN: ponla cerca de la BD, no de los usuarios.
+    #   Una visita hace 1 salto usuario→API, pero la API hace DECENAS de saltos API→BD
+    #   para armar la página. Manda la distancia a Supabase.
+    #   La BD está en `ca-central-1` (Montreal) ⇒ `ohio` o `virginia` (~20-30 ms).
+    #   `oregon` cruza el continente en CADA consulta (~70 ms) y era el valor anterior.
+    #   (Comprueba la región real de tu proyecto en el host del DATABASE_URL.)
+    region: ohio
+    # OJO: el plan `free` DUERME tras ~15 min sin tráfico y la primera visita después
+    # tarda 30-60 s en despertarlo. Si el sitio "a veces tarda muchísimo y luego va bien",
+    # es esto. Para producción: `starter`.
+    plan: free
     rootDir: .              # el repo raíz ES servmaq-platform (aquí vive el .git)
     # No usar `corepack enable` en Render: /usr/bin es read-only (EROFS). Render ya
     # provee pnpm al detectar pnpm-lock.yaml + el campo packageManager del package.json.
@@ -23,9 +32,13 @@ services:
       - key: NODE_ENV
         value: production
       # --- Base de datos (Supabase Postgres). Copia los valores desde packages/db/.env ---
-      - key: DATABASE_URL         # pooler transaction, puerto 6543, con ?pgbouncer=true
+      # DATABASE_URL va al pooler en modo SESIÓN (:5432), NO al de transacción (:6543).
+      # Esta API es un proceso persistente, no serverless: con :6543 + ?pgbouncer=true
+      # Prisma gasta 4 viajes de red por consulta en vez de 1 (medido: 4x más lento).
+      # Ver la explicación larga en apps/api/.env.example.
+      - key: DATABASE_URL         # pooler SESSION :5432 + ?connection_limit=10&pool_timeout=20
         sync: false
-      - key: DIRECT_URL           # pooler session, puerto 5432
+      - key: DIRECT_URL           # pooler session :5432 (migraciones)
         sync: false
       # --- Supabase (Auth + Storage) ---
       - key: SUPABASE_URL

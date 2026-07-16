@@ -1,0 +1,40 @@
+'use client';
+
+import { useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { D } from '@/components/design-tokens';
+
+/** Búsqueda por nombre, correo o teléfono. Va por la URL: la API la resuelve. */
+export function CustomersSearch({ initial }: { initial: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const [term, setTerm] = useState(initial);
+
+  function go(next: string) {
+    const n = new URLSearchParams(params.toString());
+    if (next.trim()) n.set('q', next.trim());
+    else n.delete('q');
+    n.delete('page'); // otro filtro = volver a la primera página
+    router.push(`${pathname}?${n.toString()}`);
+  }
+
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); go(term); }}
+      style={{ display: 'flex', alignItems: 'center', gap: 9, background: D.card, border: `1px solid ${D.inputBorder}`, borderRadius: 11, height: 42, padding: '0 13px', flex: 1, minWidth: 220, maxWidth: 360 }}
+    >
+      <i className="ph ph-magnifying-glass" style={{ color: '#6B6B71', fontSize: 14 }} />
+      <input
+        value={term}
+        onChange={(e) => setTerm(e.target.value)}
+        placeholder="Buscar nombre, correo o teléfono…"
+        aria-label="Buscar cliente"
+        style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none', color: D.text, fontSize: 13.5, fontFamily: 'inherit', outline: 'none' }}
+      />
+      {term ? (
+        <button type="button" onClick={() => { setTerm(''); go(''); }} aria-label="Limpiar búsqueda" style={{ border: 'none', background: 'transparent', color: D.muted2, cursor: 'pointer', fontSize: 13, padding: 0 }}>✕</button>
+      ) : null}
+    </form>
+  );
+}

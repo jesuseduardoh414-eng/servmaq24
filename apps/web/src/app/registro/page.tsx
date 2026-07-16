@@ -3,32 +3,23 @@ import { redirect } from 'next/navigation';
 import { getTheme, t } from '@/lib/theme';
 import { getSessionUser } from '@/lib/session';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
-import { AuthForm } from '@/components/AuthForm';
+import { AuthCard } from '@/components/AuthCard';
 
 export async function generateMetadata(): Promise<Metadata> {
   const theme = await getTheme();
   return { title: `${t(theme, 'auth.register.title')} — ${t(theme, 'site.name')}` };
 }
 
-export default async function RegistroPage() {
-  const [theme, user] = await Promise.all([getTheme(), getSessionUser()]);
+export default async function RegistroPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const [theme, user, sp] = await Promise.all([getTheme(), getSessionUser(), searchParams]);
   if (user) redirect('/');
+  const next = typeof sp.next === 'string' && sp.next.startsWith('/') ? sp.next : '/';
 
   return (
     <>
       <SiteHeader theme={theme} />
-      <main style={{ padding: '3rem 1.5rem' }}>
-        <AuthForm
-          mode="register"
-          labels={{
-            title: t(theme, 'auth.register.title'),
-            name: t(theme, 'auth.field.name'),
-            email: t(theme, 'auth.field.email'),
-            password: t(theme, 'auth.field.password'),
-            submit: t(theme, 'auth.register.submit'),
-            switchText: t(theme, 'auth.register.haveAccount'),
-          }}
-        />
+      <main style={{ maxWidth: 480, margin: '0 auto', padding: '3rem 1.5rem 4rem' }}>
+        <AuthCard initialView="register" redirectTo={next} />
       </main>
       <SiteFooter theme={theme} />
     </>

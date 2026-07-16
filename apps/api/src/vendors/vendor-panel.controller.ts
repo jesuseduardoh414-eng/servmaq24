@@ -11,6 +11,7 @@ import { prisma } from '@maqserv/db';
 import { productSlug } from '@maqserv/config';
 import type { VendorMe, VendorOrderRow, VendorProductRow, WithdrawRow } from '@maqserv/types';
 import { JwtGuard, type AuthedRequest } from '../auth/jwt.guard';
+import { sanitizeUserHtml } from '../common/sanitize';
 import { imageUrl } from '../catalog/images';
 
 const photoStorage = supabaseStorage();
@@ -30,7 +31,13 @@ const productSchema = z.object({
   categoryId: z.coerce.number().int().positive(),
   price: z.coerce.number().min(0),
   oldPrice: z.coerce.number().min(0).optional(),
-  description: z.string().min(4).max(10000),
+  /**
+   * La ficha pública pinta esto como HTML (`dangerouslySetInnerHTML`), y quien lo
+   * escribe es un vendedor: código ajeno en la página de todos. Se limpia AQUÍ, en el
+   * esquema, para que lo hereden crear y editar y no dependa de acordarse en cada sitio.
+   * Ver `sanitizeUserHtml`.
+   */
+  description: z.string().min(4).max(10000).transform(sanitizeUserHtml),
   stock: z.coerce.number().int().min(0).optional(),
   brand: z.string().max(190).optional(),
   isRental: z.coerce.boolean().optional(),
@@ -66,6 +73,18 @@ export class VendorPanelController {
       status: (u?.is_vendor ?? 0) as 0 | 1 | 2,
       shopName: u?.shop_name ?? null,
       balance: u?.current_balance ?? 0,
+      // `shop_name` es la huella de haber solicitado: revocar/rechazar pone is_vendor
+      // en 0 pero NO borra la solicitud. Con esto el sitio distingue a quien nunca
+      // pidió (formulario) de a quien perdió el acceso (explicación).
+      application: u?.shop_name
+        ? {
+          shopName: u.shop_name,
+          shopNumber: u.shop_number,
+          shopAddress: u.shop_address,
+          regNumber: u.reg_number,
+          shopMessage: u.shop_message,
+        }
+        : null,
     };
   }
 
@@ -233,6 +252,7 @@ export class VendorPanelController {
       method: w.method,
       status: w.status,
       reference: w.reference,
+      note: w.admin_note,
       createdAt: w.created_at ? w.created_at.toISOString() : null,
     }));
   }

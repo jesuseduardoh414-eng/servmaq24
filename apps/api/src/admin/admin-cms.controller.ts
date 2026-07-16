@@ -3,7 +3,7 @@ import {
   ParseIntPipe, Patch, Post, UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { supabaseStorage } from '../common/supabase-multer';
+import { ICON_TYPES, supabaseStorage } from '../common/supabase-multer';
 import { join } from 'path';
 import { mkdirSync } from 'fs';
 import { z } from 'zod';
@@ -13,6 +13,8 @@ import { AdminGuard } from './admin-auth';
 import { imageUrl, normLegacyText } from '../catalog/images';
 
 const photoStorage = supabaseStorage();
+/** Marca (favicon/isotipo): es el único sitio donde SVG e ICO tienen sentido. */
+const iconStorage = supabaseStorage(ICON_TYPES);
 const IMAGE_TYPES = /^image\/(png|jpe?g|webp|avif)$/;
 const photoOk = (f?: Express.Multer.File) => {
   if (f && !IMAGE_TYPES.test(f.mimetype)) throw new BadRequestException('Imagen inválida');
@@ -229,7 +231,9 @@ export class AdminCmsController {
   }
 
   @Patch('branding')
-  @UseInterceptors(FileInterceptor('asset', { storage: photoStorage, limits: { fileSize: 4 * 1024 * 1024 } }))
+  // `iconStorage` es quien decide de verdad: mira los bytes y acepta PNG/JPG/WebP/AVIF/
+  // GIF + SVG/ICO, rechazando un SVG con `<script>` dentro (ver image-sniff).
+  @UseInterceptors(FileInterceptor('asset', { storage: iconStorage, limits: { fileSize: 4 * 1024 * 1024 } }))
   async updateBranding(
     @Body() body: { slot?: string; clear?: string },
     @UploadedFile() asset?: Express.Multer.File,
@@ -237,10 +241,6 @@ export class AdminCmsController {
     const SLOTS = ['logoLight', 'logoDark', 'favicon', 'icon', 'logoAlt'] as const;
     const slot = String(body?.slot ?? '') as (typeof SLOTS)[number];
     if (!SLOTS.includes(slot)) throw new BadRequestException('Slot de marca inválido');
-    // Marca acepta imágenes normales + SVG/ICO (favicon/isotipo).
-    if (asset && !/^image\/(png|jpe?g|webp|avif|svg\+xml|x-icon|vnd\.microsoft\.icon)$/.test(asset.mimetype)) {
-      throw new BadRequestException('Formato inválido (usa PNG, JPG, WebP, SVG o ICO)');
-    }
 
     const theme = await prisma.theme.findFirst({ where: { active: true } });
     if (!theme) throw new NotFoundException('No hay tema activo');
@@ -356,86 +356,6 @@ export class AdminCmsController {
   @Delete('why-choose-us/:id')
   async deleteWhy(@Param('id', ParseIntPipe) id: number) {
     await prisma.why_choose_us.delete({ where: { id } });
-    return { ok: true };
-  }
-
-  // ---- Banners (tabla legacy: UNA fila con slots top1..top5 / bottom1..2) ----
-
-  @Get('banners')
-  async banners() {
-    const b = await prisma.banners.findFirst();
-    const SLOTS = ['top1', 'top2', 'top3', 'top4', 'top5', 'bottom1', 'bottom2'] as const;
-    const row = (b ?? {}) as Record<string, string | null>;
-    return SLOTS.map((slot) => ({
-      slot,
-      image: imageUrl(row[slot] ?? null),
-      link: row[`${slot}l`] ?? null,
-    }));
-  }
-
-  @Patch('banners/:slot')
-  @UseInterceptors(FileInterceptor('photo', { storage: photoStorage, limits: { fileSize: 6 * 1024 * 1024 } }))
-  async updateBanner(
-    @Param('slot') slot: string,
-    @Body() body: { link?: string; clear?: string },
-    @UploadedFile() photo?: Express.Multer.File,
-  ) {
-    if (!/^(top[1-5]|bottom[12])$/.test(slot)) throw new BadRequestException('Slot inválido');
-    photoOk(photo);
-    let b = await prisma.banners.findFirst();
-    if (!b) b = await prisma.banners.create({ data: {} });
-
-    const data: Record<string, string | null> = {};
-    if (photo) data[slot] = `uploads/${photo.filename}`;
-    if (body?.link !== undefined) data[`${slot}l`] = String(body.link) || null;
-    if (body?.clear === 'true') {
-      data[slot] = null;
-      data[`${slot}l`] = null;
-    }
-    await prisma.banners.update({ where: { id: b.id }, data });
-    return { ok: true };
-  }
-
-  // ---- Casos de éxito (tabla legacy portfolios; title=cliente, text=reseña) ----
-
-  @Get('success-cases')
-  async successCases() {
-    const rows = await prisma.portfolios.findMany({ orderBy: { id: 'desc' } });
-    return rows.map((p) => ({ id: p.id, title: p.client, text: p.review, image: imageUrl(p.photo) }));
-  }
-
-  @Post('success-cases')
-  @UseInterceptors(FileInterceptor('photo', { storage: photoStorage, limits: { fileSize: 4 * 1024 * 1024 } }))
-  async createSuccessCase(@Body() body: unknown, @UploadedFile() photo?: Express.Multer.File) {
-    const parsed = itemSchema.safeParse(body);
-    if (!parsed.success) throw new BadRequestException('Datos inválidos');
-    photoOk(photo);
-    const p = await prisma.portfolios.create({
-      data: { client: parsed.data.title, review: parsed.data.text, photo: photo ? `uploads/${photo.filename}` : null },
-    });
-    return { id: p.id };
-  }
-
-  @Patch('success-cases/:id')
-  @UseInterceptors(FileInterceptor('photo', { storage: photoStorage, limits: { fileSize: 4 * 1024 * 1024 } }))
-  async updateSuccessCase(@Param('id', ParseIntPipe) id: number, @Body() body: unknown, @UploadedFile() photo?: Express.Multer.File) {
-    const parsed = itemSchema.partial().safeParse(body);
-    if (!parsed.success) throw new BadRequestException('Datos inválidos');
-    photoOk(photo);
-    await prisma.portfolios.update({
-      where: { id },
-      data: {
-        ...(parsed.data.title !== undefined ? { client: parsed.data.title } : {}),
-        ...(parsed.data.text !== undefined ? { review: parsed.data.text } : {}),
-        ...(photo ? { photo: `uploads/${photo.filename}` } : {}),
-      },
-    });
-    return { ok: true };
-  }
-
-  @Delete('success-cases/:id')
-  async deleteSuccessCase(@Param('id', ParseIntPipe) id: number) {
-    await prisma.portfolios.delete({ where: { id } });
     return { ok: true };
   }
 

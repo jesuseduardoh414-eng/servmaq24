@@ -2,15 +2,14 @@
 
 import { useState, type ReactNode, type CSSProperties } from 'react';
 import type { CtaBlock } from '@maqserv/config';
+import { D, FONT, PRESETS } from './design-tokens';
 
-/** Paleta oscura del admin (cromo del editor). */
-export const D = {
-  card: '#141416', cardBorder: 'rgba(255,255,255,0.06)',
-  inputBg: 'rgba(255,255,255,0.03)', inputBorder: 'rgba(255,255,255,0.08)',
-  amber: '#f5b81e', text: '#f5f5f4', muted: '#6b6b72', muted2: '#71717a', previewBg: '#0e0e12', tabsBg: '#101012',
-};
-export const FONT = "'Manrope', system-ui, sans-serif";
-export const PRESETS = ['#f5b81e', '#5b9dff', '#3fbf8f', '#ff7a59', '#b98cff', '#ffffff', '#c2c6cf'];
+/**
+ * La paleta vive en `design-tokens` (módulo sin 'use client') para que también la
+ * puedan leer los componentes de SERVIDOR. Se reexporta aquí por compatibilidad:
+ * los editores la venían importando de este archivo.
+ */
+export { D, FONT, PRESETS };
 
 export const cardStyle: CSSProperties = { background: D.card, border: `1px solid ${D.cardBorder}`, borderRadius: 18, padding: 24, marginBottom: 18 };
 export const inputStyle: CSSProperties = { width: '100%', height: 46, padding: '0 14px', borderRadius: 11, border: `1px solid ${D.inputBorder}`, background: D.inputBg, color: D.text, fontFamily: 'inherit', fontSize: '14.5px', outline: 'none' };

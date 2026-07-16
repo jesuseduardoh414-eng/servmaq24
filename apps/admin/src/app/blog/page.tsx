@@ -19,6 +19,9 @@ export default async function AdminBlog() {
   const detail = active ? await adminFetch<ThemeDetail>(`/admin/themes/${active.id}`) : null;
   const tokens = detail?.tokens ? themeTokensSchema.parse(detail.tokens) : defaultTheme.tokens;
 
+  // La visibilidad de las secciones se gestiona en Temas; el módulo solo avisa.
+  const section = tokens.sections.find((s) => s.key === 'home.blog');
+
   return (
     <AdminShell adminName={admin.name} adminEmail={admin.email}>
       <BlogManager
@@ -26,6 +29,7 @@ export default async function AdminBlog() {
         themeId={active?.id ?? null}
         copys={detail?.copys ?? { es: {} }}
         tokens={tokens}
+        sectionEnabled={section ? section.enabled : false}
       />
     </AdminShell>
   );

@@ -7,6 +7,7 @@ import { getCategories } from '@/lib/api';
 import { SESSION_COOKIE } from '@/lib/session';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 import { ProductsManager } from './ProductsManager';
+import { MONO, VendorHeader, VendorMain } from '../vendor-kit';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -32,8 +33,16 @@ export default async function VendorProductsPage() {
   return (
     <>
       <SiteHeader theme={theme} />
-      <main style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem', display: 'grid', gap: '1.4rem' }}>
-        <h1 style={{ fontSize: 'var(--text-2xl)', margin: 0 }}>{t(theme, 'vendor.panel.products')}</h1>
+      <VendorMain>
+        <VendorHeader
+          title={t(theme, 'vendor.panel.products')}
+          aside={
+            <span style={{ fontFamily: MONO, fontSize: 13, color: 'var(--color-text-muted)' }}>
+              {products.length} PUBLICADO{products.length === 1 ? '' : 'S'}
+            </span>
+          }
+          back={{ href: '/vendedor', label: t(theme, 'vendor.back') }}
+        />
         <ProductsManager
           products={products}
           categories={categories}
@@ -55,7 +64,7 @@ export default async function VendorProductsPage() {
             empty: t(theme, 'vendor.products.empty'),
           }}
         />
-      </main>
+      </VendorMain>
       <SiteFooter theme={theme} />
     </>
   );

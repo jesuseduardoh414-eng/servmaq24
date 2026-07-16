@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { SidebarNav } from './SidebarNav';
 import { useBranding } from './branding';
 
@@ -21,8 +21,12 @@ export function AdminShell({
   children: ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const branding = useBranding();
   const [collapsed, setCollapsed] = useState(false);
+  // En móvil el sidebar no se "contrae": se abre y cierra encima del contenido.
+  // Un riel de iconos de 78px se come un quinto de una pantalla de 390px.
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState('');
 
   // El sidebar es oscuro → preferimos la variante para fondo oscuro (logoDark).
@@ -39,7 +43,15 @@ export function AdminShell({
     }
   }, []);
 
-  function toggleCollapse() {
+  // El mismo botón hace dos cosas según el ancho: en escritorio contrae el
+  // sidebar, en móvil abre/cierra el drawer.
+  const isNarrow = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches;
+
+  function toggleSidebar() {
+    if (isNarrow()) {
+      setMobileOpen((o) => !o);
+      return;
+    }
     setCollapsed((c) => {
       const next = !c;
       try {
@@ -51,6 +63,17 @@ export function AdminShell({
     });
   }
 
+  // Escape cierra el drawer.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [mobileOpen]);
+
+  // Al navegar el drawer se cierra (el shell no se desmonta entre páginas).
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
+
   async function logout() {
     await fetch('/api/admin/logout', { method: 'POST' });
     router.push('/login');
@@ -60,7 +83,10 @@ export function AdminShell({
   const initial = (adminName?.trim()?.[0] ?? 'A').toUpperCase();
 
   return (
-    <div className={`adm-shell${collapsed ? ' is-collapsed' : ''}`}>
+    <div className={`adm-shell${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-mobile-open' : ''}`}>
+      {/* Velo del drawer: solo existe en móvil (lo apaga el CSS en escritorio). */}
+      <div className="adm-scrim" onClick={() => setMobileOpen(false)} aria-hidden />
+
       {/* SIDEBAR */}
       <aside className="adm-sidebar">
         <div className="adm-brand">
@@ -103,7 +129,7 @@ export function AdminShell({
         <header className="adm-topbar">
           <button
             className="adm-iconbtn sm"
-            onClick={toggleCollapse}
+            onClick={toggleSidebar}
             title={collapsed ? 'Expandir menú' : 'Contraer menú'}
             aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'}
             type="button"

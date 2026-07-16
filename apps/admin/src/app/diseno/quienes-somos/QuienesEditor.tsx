@@ -132,7 +132,7 @@ export function QuienesEditor({ themeId, copys, tokens, whyChooseUs, reasons, in
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: D.muted2, fontSize: '12.5px', fontWeight: 600, marginBottom: 5 }}><i className="ph ph-paint-brush-broad" style={{ fontSize: 14 }} /> Diseño del sitio <span style={{ opacity: 0.5 }}>·</span> Quiénes somos</div>
           <h1 style={{ margin: 0, fontSize: 23, fontWeight: 800, letterSpacing: '-0.02em' }}>Sección 4 · Quiénes somos</h1>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, padding: '8px 13px', borderRadius: 999, border: `1px solid ${dirty ? 'rgba(245,184,30,0.4)' : 'rgba(255,255,255,0.08)'}`, background: dirty ? 'rgba(245,184,30,0.12)' : 'rgba(255,255,255,0.03)', color: dirty ? D.amber : D.muted2 }}><span style={{ width: 7, height: 7, borderRadius: 999, background: dirty ? D.amber : '#3fbf8f' }} />{dirty ? 'Cambios sin publicar' : 'Todo publicado'}</span>
           <button type="button" onClick={discard} disabled={!dirty || busy} style={{ border: `1px solid ${D.inputBorder}`, background: 'transparent', color: dirty ? D.text : D.muted2, borderRadius: 11, padding: '10px 16px', fontWeight: 600, fontSize: 14, cursor: dirty && !busy ? 'pointer' : 'default', opacity: dirty && !busy ? 1 : 0.5, fontFamily: 'inherit' }}>Descartar</button>
           <button type="button" onClick={publish} disabled={busy} style={{ border: 'none', background: D.amber, color: '#0a0a0b', borderRadius: 11, padding: '11px 18px', fontWeight: 800, fontSize: 14, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'inherit' }}><i className="ph-bold ph-cloud-arrow-up" style={{ fontSize: 17 }} /> {busy ? 'Publicando…' : 'Guardar y publicar'}</button>
@@ -665,11 +665,8 @@ function QsSections({ qs, setQs }: { qs: QuienesSomos; setQs: (patch: Partial<Qu
         </div>
       </div>
 
-      <div style={{ ...cardStyle, display: 'grid', gap: 14 }}>
-        <h3 style={h3Style}>Marcas</h3>
-        <Field label="Encabezado"><input value={qs.brandsEyebrow} onChange={(e) => setQs({ brandsEyebrow: e.target.value })} style={inputStyle} /></Field>
-        <Field label="Marcas (separadas por coma)"><input value={qs.brands.join(', ')} onChange={(e) => setQs({ brands: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="CAT, KOMATSU, VOLVO" style={inputStyle} /></Field>
-      </div>
+      {/* Las marcas se editan en Diseño → Marcas: son la MISMA lista que la banda
+          del home y tenerlas aquí aparte hizo que las dos versiones divergieran. */}
 
       <div style={{ ...cardStyle, display: 'grid', gap: 14 }}>
         <h3 style={h3Style}>Banda CTA (final)</h3>
@@ -818,15 +815,7 @@ function QsPreview({ qs, reasons, live }: { qs: QuienesSomos; reasons: Reason[];
         </div>
       </div>
 
-      {/* MARCAS */}
-      {qs.brands.length ? (
-        <div style={{ borderTop: `1px solid ${LINE}`, padding: '14px 16px', textAlign: 'center' }}>
-          <div style={{ fontSize: 6, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#9AA3AF', marginBottom: 8 }}>{qs.brandsEyebrow}</div>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {qs.brands.map((b, i) => <span key={i} style={{ fontSize: 11, fontWeight: 900, color: '#B3BAC4', letterSpacing: '.04em' }}>{b}</span>)}
-          </div>
-        </div>
-      ) : null}
+      {/* La banda de marcas se edita y previsualiza en Diseño → Marcas. */}
 
       {/* CTA */}
       <div style={{ padding: 14 }}>

@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { prisma } from '@maqserv/db';
 import type { QuoteDetail, QuoteItem, QuoteRequestInput, QuoteSummary } from '@maqserv/types';
 import { imageUrl } from '../catalog/images';
-import { FreightService } from './freight.service';
+import { FreightService } from '../freight/freight.service';
 
 /** Formato legacy: COT- + 8 alfanuméricos mayúsculas. */
 function newQuoteNumber(): string {

@@ -1,8 +1,28 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { prisma } from '@maqserv/db';
+import { Prisma, prisma } from '@maqserv/db';
 import { productSlug } from '@maqserv/config';
 import type { Paginated, ProductCard, ProductDetail } from '@maqserv/types';
 import { imageUrl } from './images';
+
+/**
+ * Normalización de búsqueda (ES). Se aplica IGUAL a la columna y al término:
+ *  - acentos: nadie escribe "hidráulica" en un buscador, escribe "hidraulica".
+ *  - b → v: confusión clásica en español ("retroexcabadora" ↔ "Retroexcavadora").
+ * `translate` es nativa de Postgres, así que no hace falta instalar unaccent/pg_trgm.
+ * Ambas cadenas DEBEN tener el mismo número de caracteres.
+ */
+const NORM_FROM = 'áàäâãéèëêíìïîóòöôõúùüûñçb';
+const NORM_TO = 'aaaaaeeeeiiiiooooouuuuncv';
+
+/** Mismo criterio que NORM_FROM/NORM_TO, pero en JS para el término que teclea el cliente. */
+function normalizeTerm(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // separa y quita los acentos
+    .replace(/ç/g, 'c')
+    .replace(/b/g, 'v');
+}
 
 const PAGE_SIZE = 16; // 2 grupos de 8 por página (8 → anuncio → 8 → promo)
 
@@ -42,6 +62,39 @@ export class ProductsService {
     return new Map(cats.map((c) => [c.id, c.cat_slug]));
   }
 
+  /**
+   * IDs que casan con el término, ignorando acentos/mayúsculas/b-v y exigiendo
+   * que TODAS las palabras aparezcan (en cualquier orden): así "excavadora 320"
+   * encuentra "Excavadora Hidráulica 320", que antes daba 0 resultados.
+   */
+  private async searchIds(term: string): Promise<number[]> {
+    const tokens = term.trim().split(/\s+/).map(normalizeTerm).filter((t) => t.length > 0).slice(0, 6);
+    if (tokens.length === 0) return [];
+    const conds = tokens.map(
+      (tk) => Prisma.sql`translate(lower(name), ${NORM_FROM}, ${NORM_TO}) LIKE ${`%${tk}%`}`,
+    );
+    const rows = await prisma.$queryRaw<Array<{ id: number }>>(
+      Prisma.sql`SELECT id FROM products WHERE status = 1 AND ${Prisma.join(conds, ' AND ')} LIMIT 500`,
+    );
+    return rows.map((r) => Number(r.id));
+  }
+
+  /**
+   * IDs de productos cuya calificación PROMEDIO llega a `min`.
+   *
+   * `products` no tiene relación con `comments` (el esquema viene de la introspección
+   * del Laravel viejo, sin llaves foráneas), así que no se puede filtrar por el
+   * promedio de una relación: hay que agregarlo aparte.
+   */
+  private async ratedIds(min: number): Promise<number[]> {
+    const rows = await prisma.comments.groupBy({
+      by: ['product_id'],
+      where: { status: 1 },
+      _avg: { rating: true },
+    });
+    return rows.filter((r) => (r._avg.rating ?? 0) >= min).map((r) => r.product_id);
+  }
+
   async list(opts: {
     page?: number;
     search?: string;
@@ -49,12 +102,19 @@ export class ProductsService {
     featured?: boolean;
     vendorId?: number; // tienda de un vendedor (products.user_id)
     subcategory?: string; // sub_slug
+    minPrice?: number;
+    maxPrice?: number;
+    /** Calificación promedio mínima (2, 3 o 4 estrellas). */
+    minRating?: number;
+    /** `now` = con existencias · `rent` = en renta · `offer` = con precio anterior. */
+    availability?: 'now' | 'rent' | 'offer';
+    /** `low`/`high` = precio · `new` = más recientes. Default: relevancia (id desc). */
+    sort?: 'low' | 'high' | 'new';
   }): Promise<Paginated<ProductCard>> {
     const page = Math.max(1, opts.page ?? 1);
 
     // Solo productos publicados (status=1, convención del Laravel viejo)
     const where: Record<string, unknown> = { status: 1 };
-    if (opts.search) where.name = { contains: opts.search };
     if (opts.featured) where.featured = 1;
     if (opts.vendorId) where.user_id = opts.vendorId;
     if (opts.subcategory) {
@@ -66,11 +126,52 @@ export class ProductsService {
       where.category_id = cat ? cat.id : -1; // categoría inexistente → 0 resultados
     }
 
+    // Precio: `cprice` es el precio de venta/renta mensual que ve el cliente.
+    if (opts.minPrice !== undefined || opts.maxPrice !== undefined) {
+      where.cprice = {
+        ...(opts.minPrice !== undefined ? { gte: opts.minPrice } : {}),
+        ...(opts.maxPrice !== undefined ? { lte: opts.maxPrice } : {}),
+      };
+    }
+
+    if (opts.availability === 'now') {
+      // Sin `stock` = sin control de existencias ⇒ disponible (mismo criterio que la card).
+      where.OR = [{ stock: null }, { stock: { gt: 0 } }];
+    } else if (opts.availability === 'rent') {
+      where.is_rental = true;
+    } else if (opts.availability === 'offer') {
+      // "En oferta" = tiene precio anterior, que es justo cuando la card lo tacha.
+      // No se comparan pprice > cprice: Prisma no compara dos columnas sin SQL crudo,
+      // y el criterio debe ser el MISMO que el cliente ve en la tarjeta.
+      where.pprice = { gt: 0 };
+    }
+
+    /**
+     * Filtros que se resuelven como conjuntos de IDs (búsqueda y calificación) y hay
+     * que INTERSECTAR: los dos escriben en `where.id` y el segundo pisaba al primero.
+     */
+    const idSets: number[][] = [];
+    if (opts.search) idSets.push(await this.searchIds(opts.search));
+    if (opts.minRating) idSets.push(await this.ratedIds(opts.minRating));
+    if (idSets.length > 0) {
+      const ids = idSets.reduce((a, b) => {
+        const keep = new Set(b);
+        return a.filter((x) => keep.has(x));
+      });
+      where.id = { in: ids };
+    }
+
+    const orderBy: Prisma.productsOrderByWithRelationInput =
+      opts.sort === 'low' ? { cprice: 'asc' }
+        : opts.sort === 'high' ? { cprice: 'desc' }
+          : opts.sort === 'new' ? { created_at: 'desc' }
+            : { id: 'desc' }; // relevancia
+
     const [total, rows] = await Promise.all([
       prisma.products.count({ where }),
       prisma.products.findMany({
         where,
-        orderBy: { id: 'desc' },
+        orderBy,
         skip: (page - 1) * PAGE_SIZE,
         take: PAGE_SIZE,
         select: {
@@ -99,9 +200,20 @@ export class ProductsService {
     ]);
 
     const catSlugs = new Map(cat ? [[cat.id, cat.cat_slug] as const] : []);
+    let specs: Array<{ label: string; value: string }> = [];
+    try {
+      const parsed = JSON.parse(p.specs ?? '[]');
+      if (Array.isArray(parsed)) {
+        specs = parsed
+          .filter((x) => x && typeof x.label === 'string' && x.label.trim())
+          .map((x) => ({ label: String(x.label).trim(), value: String(x.value ?? '').trim() }));
+      }
+    } catch { /* specs legacy/no JSON */ }
     return {
       ...this.toCard(p, catSlugs),
       description: p.description,
+      short: p.Corto && p.Corto.trim() ? p.Corto.trim() : null,
+      specs,
       gallery: gallery.map((g) => imageUrl(g.photo)).filter((u): u is string => u !== null),
       medical: {
         lote: p.lote,

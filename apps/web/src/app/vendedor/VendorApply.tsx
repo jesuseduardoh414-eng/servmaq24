@@ -2,10 +2,32 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card, Input } from '@maqserv/ui';
+import type { VendorApplication } from '@maqserv/types';
 
+const MONO = "'Space Mono', ui-monospace, monospace";
+const DISPLAY = 'var(--font-display)';
+
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontFamily: MONO, fontSize: 11, letterSpacing: '0.12em',
+  textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 8,
+};
+const inputStyle: React.CSSProperties = {
+  width: '100%', fontFamily: 'var(--font-sans)', fontSize: 16, color: 'var(--color-text)',
+  background: 'color-mix(in srgb, var(--color-text) 3%, var(--color-surface))',
+  border: '1px solid var(--color-border)', borderRadius: 10, padding: '13px 15px', outline: 'none',
+};
+
+/**
+ * Solicitud para vender (`POST /vendor/apply` → is_vendor 1).
+ *
+ * `initial` la prellena: la usa quien vuelve a solicitar tras un rechazo o una
+ * revocación — reescribir todo desde cero solo para corregir un dato es hostil.
+ * `bare` omite el encabezado cuando la página ya puso uno.
+ */
 export function VendorApply({
   labels,
+  initial,
+  bare = false,
 }: {
   labels: {
     title: string;
@@ -17,11 +39,12 @@ export function VendorApply({
     message: string;
     submit: string;
   };
+  initial: VendorApplication | null;
+  bare?: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const full = { width: '100%' } as const;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,22 +68,60 @@ export function VendorApply({
       setError(typeof data?.message === 'string' ? data.message : 'No pudimos enviar tu solicitud');
       return;
     }
-    router.refresh();
+    router.refresh(); // el servidor vuelve a leer /vendor/me y cambia de vista
   }
 
+  const body = (
+    <form onSubmit={onSubmit} style={{ display: 'grid', gap: 18, maxWidth: 620 }}>
+      <div>
+        <label style={labelStyle} htmlFor="va-shopName">{labels.shopName}</label>
+        <input id="va-shopName" name="shopName" required minLength={2} maxLength={190} defaultValue={initial?.shopName ?? ''} style={inputStyle} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 18 }}>
+        <div>
+          <label style={labelStyle} htmlFor="va-shopNumber">{labels.shopNumber}</label>
+          <input id="va-shopNumber" name="shopNumber" maxLength={50} defaultValue={initial?.shopNumber ?? ''} style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle} htmlFor="va-regNumber">{labels.regNumber}</label>
+          <input id="va-regNumber" name="regNumber" maxLength={100} defaultValue={initial?.regNumber ?? ''} style={inputStyle} />
+        </div>
+      </div>
+      <div>
+        <label style={labelStyle} htmlFor="va-shopAddress">{labels.shopAddress}</label>
+        <input id="va-shopAddress" name="shopAddress" maxLength={250} defaultValue={initial?.shopAddress ?? ''} style={inputStyle} />
+      </div>
+      <div>
+        {/* La API acepta 1000 caracteres: pedirlos en un input de una línea era absurdo. */}
+        <label style={labelStyle} htmlFor="va-shopMessage">{labels.message}</label>
+        <textarea id="va-shopMessage" name="shopMessage" rows={4} maxLength={1000} defaultValue={initial?.shopMessage ?? ''} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.55 }} />
+      </div>
+
+      {error ? (
+        <p role="alert" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10, background: 'color-mix(in srgb, var(--color-error) 8%, var(--color-surface))', border: '1px solid color-mix(in srgb, var(--color-error) 40%, transparent)', color: 'var(--color-error)', padding: '13px 16px', borderRadius: 10, fontSize: 14.5, fontWeight: 600 }}>
+          <span style={{ fontSize: 17 }}>⚠</span> {error}
+        </p>
+      ) : null}
+
+      <div>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 16, background: 'var(--color-primary)', color: 'var(--color-primary-fg)', border: 'none', padding: '15px 34px', borderRadius: 100, cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.6 : 1 }}
+        >
+          {loading ? '…' : `${labels.submit} →`}
+        </button>
+      </div>
+    </form>
+  );
+
+  if (bare) return body;
+
   return (
-    <Card style={{ maxWidth: 520, display: 'grid', gap: '.8rem' }}>
-      <h2 style={{ fontSize: 'var(--text-lg)', margin: 0 }}>{labels.title}</h2>
-      <p style={{ color: 'var(--color-text-muted)', margin: 0, fontSize: 'var(--text-sm)' }}>{labels.subtitle}</p>
-      <form onSubmit={onSubmit} style={{ display: 'grid', gap: '.8rem' }}>
-        <Input name="shopName" required minLength={2} placeholder={labels.shopName} aria-label={labels.shopName} style={full} />
-        <Input name="shopNumber" placeholder={labels.shopNumber} aria-label={labels.shopNumber} style={full} />
-        <Input name="shopAddress" placeholder={labels.shopAddress} aria-label={labels.shopAddress} style={full} />
-        <Input name="regNumber" placeholder={labels.regNumber} aria-label={labels.regNumber} style={full} />
-        <Input name="shopMessage" placeholder={labels.message} aria-label={labels.message} style={full} />
-        {error ? <p role="alert" style={{ color: 'var(--color-error)', margin: 0, fontSize: 'var(--text-sm)' }}>{error}</p> : null}
-        <div><Button type="submit" disabled={loading}>{labels.submit}</Button></div>
-      </form>
-    </Card>
+    <section style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '26px 28px' }}>
+      <h2 style={{ fontFamily: DISPLAY, margin: '0 0 8px', fontSize: 24, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--color-text)' }}>{labels.title}</h2>
+      <p style={{ margin: '0 0 24px', fontSize: 15.5, color: 'var(--color-text-muted)', lineHeight: 1.55, maxWidth: '58ch' }}>{labels.subtitle}</p>
+      {body}
+    </section>
   );
 }

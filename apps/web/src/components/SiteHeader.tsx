@@ -4,10 +4,13 @@ import { t } from '@/lib/theme';
 import { getSiteSettings } from '@/lib/api';
 import { HeaderActions } from '@/components/HeaderActions';
 import { MainNav } from '@/components/MainNav';
+import { MobileNav } from '@/components/MobileNav';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { FooterNewsletter } from '@/components/FooterNewsletter';
 
-const CONTAINER: React.CSSProperties = { maxWidth: 1240, margin: '0 auto', padding: '0 26px' };
+// Padding fluido: 26px en escritorio, 16px en móvil (sin media query, el
+// inline style no las admite).
+const CONTAINER: React.CSSProperties = { maxWidth: 1240, margin: '0 auto', padding: '0 clamp(16px, 4vw, 26px)' };
 
 /**
  * Header del diseño SEGAshop:
@@ -22,28 +25,40 @@ export async function SiteHeader({ theme }: { theme: Theme }) {
   const contact = theme.tokens.contact ?? defaultTheme.tokens.contact;
   const cPhone = contact.phone || settings.phone;
   const cEmail = contact.email || settings.email;
+  // Fuente única de la navegación: la comparten el nav de escritorio y el
+  // drawer de móvil (si divergen, el menú miente en uno de los dos).
+  const navItems = [
+    { href: '/', label: t(theme, 'nav.home') },
+    { href: '/productos', label: t(theme, 'nav.products') },
+    { href: '/categorias', label: t(theme, 'nav.categories') },
+    { href: '/quienes-somos', label: t(theme, 'nav.about') },
+    { href: '/blog', label: t(theme, 'nav.blog') },
+    { href: '/contacto', label: t(theme, 'nav.contact') },
+  ];
 
   return (
     <>
-      {/* Barra superior */}
+      {/* Barra superior. En móvil se queda solo el teléfono (lo demás vive en el
+          drawer): con todo visible se apilaba en 4 renglones y se comía media
+          pantalla. */}
       <div style={{ background: 'var(--color-secondary)', color: 'rgba(255,255,255,.66)', fontSize: '12.5px', fontWeight: 300 }}>
-        <div style={{ ...CONTAINER, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', paddingTop: 9, paddingBottom: 9 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+        <div className="tb-row" style={{ ...CONTAINER, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', paddingTop: 9, paddingBottom: 9 }}>
+          <div className="tb-left" style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
             {cPhone ? (
               <a href={`tel:${cPhone.replace(/\s+/g, '')}`} style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 7 }}>
                 <span style={{ color: 'var(--color-primary)' }}>✆</span>{cPhone}
               </a>
             ) : null}
             {cEmail ? (
-              <a href={`mailto:${cEmail}`} style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 7 }}>
+              <a className="tb-email" href={`mailto:${cEmail}`} style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 7 }}>
                 <span style={{ color: 'var(--color-primary)' }}>✉</span>{cEmail}
               </a>
             ) : null}
-            <span style={{ display: 'flex', alignItems: 'center', gap: 7, opacity: 0.7 }}>
+            <span className="tb-hours" style={{ display: 'flex', alignItems: 'center', gap: 7, opacity: 0.7 }}>
               <span style={{ color: 'var(--color-primary)' }}>◷</span>{contact.hours || t(theme, 'topbar.hours')}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div className="tb-right" style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <Link href="/rastreo" style={{ color: 'rgba(255,255,255,.66)' }}>{t(theme, 'topbar.track')}</Link>
             <span style={{ opacity: 0.25 }}>|</span>
             <Link href="/vendedor" style={{ color: 'rgba(255,255,255,.66)' }}>{t(theme, 'topbar.sell')}</Link>
@@ -64,9 +79,9 @@ export async function SiteHeader({ theme }: { theme: Theme }) {
           borderBottom: '1px solid var(--color-border)',
         }}
       >
-        <div style={{ ...CONTAINER, display: 'flex', alignItems: 'center', gap: 14, paddingTop: 14, paddingBottom: 14, flexWrap: 'wrap' }}>
+        <div className="hdr-inner" style={{ ...CONTAINER, display: 'flex', alignItems: 'center', gap: 14, paddingTop: 14, paddingBottom: 14 }}>
           {/* Logo */}
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, textDecoration: 'none' }}>
+          <Link href="/" className="hdr-logo" style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, minWidth: 0, textDecoration: 'none' }}>
             {(() => {
               const brand2 = theme.tokens.branding ?? {};
               const logoLight = brand2.logoLight ?? settings.logo;
@@ -74,21 +89,22 @@ export async function SiteHeader({ theme }: { theme: Theme }) {
               // OJO: sin `display` inline. La conmutación claro/oscuro se hace por
               // CSS (.brand-swap .brand-logo-*), y un `display:block` inline la
               // anularía (los estilos inline ganan a las clases) → saldrían las dos.
-              const imgStyle: React.CSSProperties = { objectFit: 'contain', height: 46, width: 'auto' };
+              // La altura la fija `.hdr-logo-img` (CSS) para poder bajarla en móvil.
+              const imgStyle: React.CSSProperties = { objectFit: 'contain', width: 'auto' };
               if (logoLight && logoDark) {
                 // Ambas variantes: se intercambian por esquema de color (CSS).
                 return (
                   <span className="brand-swap" style={{ display: 'inline-flex', alignItems: 'center' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="brand-logo-light" src={logoLight} alt={brand} style={imgStyle} />
+                    <img className="brand-logo-light hdr-logo-img" src={logoLight} alt={brand} style={imgStyle} />
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="brand-logo-dark" src={logoDark} alt={brand} style={imgStyle} />
+                    <img className="brand-logo-dark hdr-logo-img" src={logoDark} alt={brand} style={imgStyle} />
                   </span>
                 );
               }
               if (logoLight || logoDark) {
                 // eslint-disable-next-line @next/next/no-img-element
-                return <img src={(logoLight ?? logoDark) as string} alt={brand} style={imgStyle} />;
+                return <img className="hdr-logo-img" src={(logoLight ?? logoDark) as string} alt={brand} style={imgStyle} />;
               }
               return null;
             })() ?? (
@@ -122,20 +138,12 @@ export async function SiteHeader({ theme }: { theme: Theme }) {
             )}
           </Link>
 
-          {/* Navegación (resalta el activo por ruta) */}
-          <MainNav
-            items={[
-              { href: '/', label: t(theme, 'nav.home') },
-              { href: '/productos', label: t(theme, 'nav.products') },
-              { href: '/categorias', label: t(theme, 'nav.categories') },
-              { href: '/quienes-somos', label: t(theme, 'nav.about') },
-              { href: '/blog', label: t(theme, 'nav.blog') },
-              { href: '/contacto', label: t(theme, 'nav.contact') },
-            ]}
-          />
+          {/* Navegación (resalta el activo por ruta). Debajo de 1024px la
+              sustituye el drawer de `MobileNav`: aquí ya no cabe. */}
+          <MainNav items={navItems} />
 
           {/* Acciones */}
-          <ThemeToggle />
+          <span className="hdr-theme"><ThemeToggle /></span>
           <HeaderActions
             labels={{
               search: t(theme, 'nav.search'),
@@ -147,6 +155,19 @@ export async function SiteHeader({ theme }: { theme: Theme }) {
               greeting: t(theme, 'auth.greeting'),
               searchPlaceholder: t(theme, 'catalog.search.placeholder'),
             }}
+          />
+          <MobileNav
+            items={navItems}
+            labels={{
+              login: t(theme, 'nav.login'),
+              register: t(theme, 'nav.register'),
+              logout: t(theme, 'auth.logout'),
+              wishlist: t(theme, 'nav.wishlist'),
+              track: t(theme, 'topbar.track'),
+              sell: t(theme, 'topbar.sell'),
+              menu: t(theme, 'nav.menu'),
+            }}
+            contact={{ phone: cPhone ?? null, email: cEmail ?? null }}
           />
         </div>
       </header>
@@ -246,8 +267,8 @@ export function SiteFooter({ theme }: { theme: Theme }) {
         <div style={{ ...CONTAINER, display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', paddingTop: 20, paddingBottom: 20, fontSize: '13px', opacity: 0.55, fontWeight: 300 }}>
           <span>{copyright}</span>
           <span style={{ display: 'flex', gap: 20 }}>
-            <Link href="/contacto" style={{ color: 'rgba(255,255,255,.55)' }}>{t(theme, 'footer.terms')}</Link>
-            <Link href="/contacto" style={{ color: 'rgba(255,255,255,.55)' }}>{t(theme, 'footer.privacy')}</Link>
+            <Link href="/terminos" style={{ color: 'rgba(255,255,255,.55)' }}>{t(theme, 'footer.terms')}</Link>
+            <Link href="/privacidad" style={{ color: 'rgba(255,255,255,.55)' }}>{t(theme, 'footer.privacy')}</Link>
           </span>
         </div>
       </div>

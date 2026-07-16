@@ -1,5 +1,4 @@
 import type {
-  BannerSet,
   BlogCard,
   BlogDetail,
   Category,
@@ -45,6 +44,11 @@ export function getProducts(opts: {
   category?: string;
   subcategory?: string;
   featured?: boolean;
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
+  availability?: string;
+  sort?: string;
 } = {}): Promise<Paginated<ProductCard>> {
   const q = new URLSearchParams();
   if (opts.page) q.set('page', String(opts.page));
@@ -52,6 +56,11 @@ export function getProducts(opts: {
   if (opts.category) q.set('category', opts.category);
   if (opts.subcategory) q.set('subcategory', opts.subcategory);
   if (opts.featured) q.set('featured', '1');
+  if (opts.minPrice !== undefined) q.set('minPrice', String(opts.minPrice));
+  if (opts.maxPrice !== undefined) q.set('maxPrice', String(opts.maxPrice));
+  if (opts.minRating !== undefined) q.set('minRating', String(opts.minRating));
+  if (opts.availability) q.set('availability', opts.availability);
+  if (opts.sort) q.set('sort', opts.sort);
   const qs = q.toString();
   return get(`/catalog/products${qs ? `?${qs}` : ''}`);
 }
@@ -92,10 +101,6 @@ export function getWhyChooseUs(): Promise<WhyChooseUsItem[]> {
 
 export function getServices(): Promise<ServiceItem[]> {
   return get('/content/services');
-}
-
-export function getBanners(): Promise<BannerSet> {
-  return get('/content/banners');
 }
 
 export function getBlogs(limit = 3): Promise<BlogCard[]> {

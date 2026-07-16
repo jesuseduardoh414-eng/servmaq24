@@ -93,29 +93,13 @@ class FeedController {
   }
 }
 
-/** Acciones admin de integraciones. */
-@Controller('admin/perfex')
-@UseGuards(AdminGuard)
-class PerfexAdminController {
-  constructor(private readonly perfex: PerfexService) {}
-
-  /** Carga inicial: empuja TODOS los suscriptores actuales a Perfex. */
-  @Post('sync-subscribers')
-  async syncSubscribers() {
-    if (!this.perfex.enabled) {
-      return { ok: false, message: 'Perfex no configurado (faltan PERFEX_URL y PERFEX_TOKEN)' };
-    }
-    const subs = await prisma.subscribers.findMany();
-    let sent = 0;
-    for (const s of subs) {
-      if (await this.perfex.pushLead({ name: s.email, email: s.email, source: 'Newsletter' })) sent++;
-    }
-    return { ok: true, total: subs.length, sent };
-  }
-}
+// La carga inicial de suscriptores a Perfex vivía aquí (`POST admin/perfex/sync-subscribers`)
+// pero NO tenía botón en el panel: era inalcanzable. Se movió a
+// `admin-subscribers.controller.ts` (`POST admin/subscribers/sync`), junto a la lista
+// que sincroniza y con su botón.
 
 @Module({
-  controllers: [FeedController, PerfexAdminController],
+  controllers: [FeedController],
   providers: [PerfexService],
   exports: [PerfexService],
 })

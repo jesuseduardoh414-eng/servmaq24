@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SESSION_COOKIE } from '@/lib/session';
+import { clientIpHeaders } from '@/lib/client-ip';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -14,6 +15,7 @@ export async function POST(req: NextRequest) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...clientIpHeaders(req),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),

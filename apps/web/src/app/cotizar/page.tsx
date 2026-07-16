@@ -28,12 +28,23 @@ export default async function QuotePage({ searchParams }: { searchParams: Promis
   return (
     <>
       <SiteHeader theme={theme} />
-      <main style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem' }}>
-        <header style={{ textAlign: 'center', marginBottom: '1.6rem', display: 'grid', gap: '.4rem' }}>
-          <h1 style={{ fontSize: 'var(--text-2xl)' }}>{t(theme, 'quote.form.title')}</h1>
-          <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{t(theme, 'quote.form.subtitle')}</p>
-        </header>
-        <QuoteForm
+      <div style={{ background: 'var(--color-bg)', color: 'var(--color-text)' }}>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" />
+        <style>{`
+          @media (max-width: 760px){
+            .qf-wrap{ padding-left:22px !important; padding-right:22px !important; }
+            .qf-title{ font-size:34px !important; }
+            .qf-two{ grid-template-columns:1fr !important; }
+          }
+          .qf-field:focus{ border-color: var(--color-text) !important; }
+          .qf-hit:hover{ background: color-mix(in srgb, var(--color-text) 5%, transparent) !important; }
+        `}</style>
+        <main className="qf-wrap" style={{ maxWidth: 820, margin: '0 auto', padding: '44px 40px 60px' }}>
+          <div style={{ borderBottom: '2px solid var(--color-text)', paddingBottom: 20, marginBottom: 28 }}>
+            <h1 className="qf-title" style={{ fontFamily: 'var(--font-display)', margin: 0, fontSize: 48, fontWeight: 800, letterSpacing: '-0.04em' }}>{t(theme, 'quote.form.title')}</h1>
+            <p style={{ color: 'var(--color-text-muted)', margin: '10px 0 0', fontSize: 15, lineHeight: 1.6 }}>{t(theme, 'quote.form.subtitle')}</p>
+          </div>
+          <QuoteForm
           product={product}
           user={user}
           labels={{
@@ -51,11 +62,10 @@ export default async function QuotePage({ searchParams }: { searchParams: Promis
             successTitle: t(theme, 'quote.form.success.title'),
             successBody: t(theme, 'quote.form.success.body'),
             numberLabel: t(theme, 'quote.form.number'),
-            emptyCart: t(theme, 'cart.empty'),
-            browse: t(theme, 'cart.browse'),
-          }}
-        />
-      </main>
+            }}
+          />
+        </main>
+      </div>
       <SiteFooter theme={theme} />
     </>
   );

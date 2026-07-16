@@ -56,17 +56,21 @@ const GROUPS: Array<{ title: string; items: Item[] }> = [
       { href: '/diseno/oferta', label: 'Sección 6 · Oferta', icon: 'ph-tag' },
       { href: '/diseno/resenas', label: 'Sección 7 · Reseñas', icon: 'ph-star' },
       { href: '/diseno/faq', label: 'Sección 8 · Preguntas frecuentes', icon: 'ph-question' },
+      { href: '/diseno/servicios', label: 'Servicios', icon: 'ph-wrench' },
+      { href: '/diseno/marcas', label: 'Marcas', icon: 'ph-certificate' },
       { href: '/blog', label: 'Blog', icon: 'ph-article' },
       { href: '/diseno/contacto', label: 'Contacto', icon: 'ph-address-book' },
       { href: '/diseno/footer', label: 'Footer', icon: 'ph-rows' },
+      { href: '/diseno/legal', label: 'Legal (términos/privacidad)', icon: 'ph-scroll' },
       { href: '/temas', label: 'Temas y colores', icon: 'ph-swatches' },
     ],
   },
   {
     title: 'Configuración',
     items: [
+      { href: '/pagos', label: 'Pagos', icon: 'ph-credit-card' },
+      { href: '/traslado', label: 'Traslado', icon: 'ph-truck' },
       { href: '/admins', label: 'Administradores', icon: 'ph-user-gear' },
-      { href: '/ajustes', label: 'Ajustes', icon: 'ph-gear' },
     ],
   },
 ];

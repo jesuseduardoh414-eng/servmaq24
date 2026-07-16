@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import type { PaymentMethod } from '@maqserv/types';
+import { defaultTheme } from '@maqserv/config';
 import { getTheme, t } from '@/lib/theme';
 import { getSessionUser } from '@/lib/session';
 import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
@@ -24,14 +25,13 @@ export default async function CheckoutPage() {
   return (
     <>
       <SiteHeader theme={theme} />
-      <main style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem' }}>
-        <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: '1.4rem' }}>
-          {t(theme, 'checkout.title')}
-        </h1>
-        <CheckoutForm
-          user={user}
-          methods={methods}
-          labels={{
+      {/* El formulario trae su propio contenedor (stepper + título), igual que el carrito. */}
+      <CheckoutForm
+        user={user}
+        config={theme.tokens.checkout ?? defaultTheme.tokens.checkout}
+        methods={methods}
+        labels={{
+            title: t(theme, 'checkout.title'),
             contactTitle: t(theme, 'checkout.contact.title'),
             name: t(theme, 'auth.field.name'),
             email: t(theme, 'auth.field.email'),
@@ -50,10 +50,9 @@ export default async function CheckoutPage() {
             couponApply: t(theme, 'checkout.coupon.apply'),
             couponApplied: t(theme, 'checkout.coupon.applied'),
             couponInvalid: t(theme, 'checkout.coupon.invalid'),
-            discount: t(theme, 'checkout.discount'),
-          }}
-        />
-      </main>
+          discount: t(theme, 'checkout.discount'),
+        }}
+      />
       <SiteFooter theme={theme} />
     </>
   );

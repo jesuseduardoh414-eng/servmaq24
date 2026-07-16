@@ -88,7 +88,9 @@ export function QuestionsManager({ initial }: { initial: AdminQuestion[] }) {
         <p style={{ margin: 0, fontSize: 14.5, color: C.muted }}>Responde las dudas que dejan tus clientes en cada producto. Las respondidas se muestran en la pagina del producto.</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 4, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 12, padding: 4, width: 'fit-content', marginBottom: 20 }}>
+      {/* `fit-content` + sin envolver = las 3 pestañas nunca bajan de su ancho
+          natural (380px) y se salían en móvil. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 12, padding: 4, width: 'fit-content', maxWidth: '100%', marginBottom: 20 }}>
         {([['pend', 'Por responder', pending], ['resp', 'Respondidas', answered], ['todas', 'Todas', list.length]] as const).map(([id, label, count]) => {
           const on = tab === id;
           return (

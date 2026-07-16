@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
 import { adminFetch, getAdmin } from '@/lib/admin';
 import { AdminShell } from '@/components/AdminShell';
-import { Table, Td } from '@/components/Table';
-import { QuoteRespond } from './QuoteRespond';
+import { QuotesManager, type QuoteItem } from './QuotesManager';
 
 interface QuoteRow {
   id: number;
@@ -19,49 +18,30 @@ interface QuoteRow {
   createdAt: string | null;
 }
 
+const DAY = 86_400_000;
+
 export default async function AdminQuotes() {
   const admin = await getAdmin();
   if (!admin) redirect('/login');
   const data = await adminFetch<{ items: QuoteRow[] }>('/admin/quotes');
 
+  // La antigüedad se calcula en el SERVIDOR: si se hiciera en el cliente,
+  // "hace N días" podría diferir del HTML servido y romper la hidratación.
+  const now = Date.now();
+  const items: QuoteItem[] = (data?.items ?? []).map((q) => {
+    const ts = q.createdAt ? new Date(q.createdAt).getTime() : null;
+    return {
+      ...q,
+      days: ts ? Math.max(0, Math.floor((now - ts) / DAY)) : 0,
+      dateLabel: ts
+        ? new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(ts))
+        : '—',
+    };
+  });
+
   return (
     <AdminShell adminName={admin.name} adminEmail={admin.email}>
-      <h1 style={{ fontSize: 'var(--text-2xl)', marginBottom: '1.2rem' }}>Cotizaciones</h1>
-      <Table headers={['Cotización', 'Cliente', 'Subtotal', 'Total', 'Estado', 'Acción']}>
-        {(data?.items ?? []).map((q) => (
-          <tr key={q.id}>
-            <Td>
-              <strong>{q.quoteNumber}</strong>
-              <br />
-              <span style={{ color: 'var(--color-text-muted)' }}>
-                {q.createdAt ? new Date(q.createdAt).toLocaleDateString('es-MX') : ''}
-              </span>
-            </Td>
-            <Td>
-              {q.name}{q.company ? ` · ${q.company}` : ''}
-              <br />
-              <span style={{ color: 'var(--color-text-muted)' }}>{q.email} · {q.phone}</span>
-            </Td>
-            <Td><span style={{ fontVariantNumeric: 'tabular-nums' }}>${q.subtotal.toLocaleString('es-MX')}</span></Td>
-            <Td><strong style={{ fontVariantNumeric: 'tabular-nums' }}>${q.total.toLocaleString('es-MX')}</strong></Td>
-            <Td>
-              <span
-                style={{
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 700,
-                  padding: '.2em .7em',
-                  borderRadius: '999px',
-                  background: q.status === 'completed' ? 'var(--color-success)' : 'var(--color-warning)',
-                  color: 'var(--color-primary-fg)',
-                }}
-              >
-                {q.status}
-              </span>
-            </Td>
-            <Td>{q.status === 'pending' ? <QuoteRespond quoteId={q.id} subtotal={q.subtotal} /> : null}</Td>
-          </tr>
-        ))}
-      </Table>
+      <QuotesManager items={items} />
     </AdminShell>
   );
 }

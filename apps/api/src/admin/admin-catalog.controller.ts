@@ -29,6 +29,8 @@ const productSchema = z.object({
   status: z.coerce.number().int().min(0).max(1).optional(),
   lote: z.string().max(190).optional(),
   caducidad: z.string().optional(), // ISO date
+  short: z.string().max(5000).optional(), // Corto (resumen)
+  specs: z.string().max(20000).optional(), // JSON [{label,value}]
 });
 
 const categorySchema = z.object({
@@ -108,6 +110,8 @@ export class AdminCatalogController {
       status: p.status,
       lote: p.lote,
       caducidad: p.caducidad ? p.caducidad.toISOString().slice(0, 10) : null,
+      short: p.Corto ?? null,
+      specs: (() => { try { const a = JSON.parse(p.specs ?? '[]'); return Array.isArray(a) ? a : []; } catch { return []; } })(),
       image: imageUrl(p.photo),
     };
   }
@@ -135,6 +139,8 @@ export class AdminCatalogController {
         status: d.status ?? 1,
         lote: d.lote ?? null,
         caducidad: d.caducidad ? new Date(d.caducidad) : null,
+        Corto: d.short ?? null,
+        specs: d.specs ?? null,
         photo: photo ? `uploads/${photo.filename}` : null,
         created_at: new Date(),
         updated_at: new Date(),
@@ -172,6 +178,8 @@ export class AdminCatalogController {
         ...(d.status !== undefined ? { status: d.status } : {}),
         ...(d.lote !== undefined ? { lote: d.lote } : {}),
         ...(d.caducidad !== undefined ? { caducidad: d.caducidad ? new Date(d.caducidad) : null } : {}),
+        ...(d.short !== undefined ? { Corto: d.short } : {}),
+        ...(d.specs !== undefined ? { specs: d.specs } : {}),
         ...(photo ? { photo: `uploads/${photo.filename}` } : {}),
         updated_at: new Date(),
       },
@@ -183,6 +191,34 @@ export class AdminCatalogController {
   async deleteProduct(@Param('id', ParseIntPipe) id: number) {
     // Baja lógica: conserva integridad de órdenes históricas
     await prisma.products.update({ where: { id }, data: { status: 0, updated_at: new Date() } });
+    return { ok: true };
+  }
+
+  // ---- Galería del producto (máx. 6 imágenes) ----
+
+  @Get('products/:id/gallery')
+  async gallery(@Param('id', ParseIntPipe) id: number) {
+    const rows = await prisma.galleries.findMany({ where: { product_id: id }, orderBy: { id: 'asc' } });
+    return rows.map((g) => ({ id: Number(g.id), url: imageUrl(g.photo) }));
+  }
+
+  @Post('products/:id/gallery')
+  @UseInterceptors(FileInterceptor('photo', { storage: photoStorage, limits: { fileSize: 8 * 1024 * 1024 } }))
+  async addGallery(@Param('id', ParseIntPipe) id: number, @UploadedFile() photo?: Express.Multer.File) {
+    const prod = await prisma.products.findUnique({ where: { id } });
+    if (!prod) throw new NotFoundException();
+    if (!photo) throw new BadRequestException('Falta la imagen');
+    if (!IMAGE_TYPES.test(photo.mimetype)) throw new BadRequestException('Imagen inválida');
+    const count = await prisma.galleries.count({ where: { product_id: id } });
+    if (count >= 6) throw new BadRequestException('Máximo 6 imágenes por producto');
+    const path = `uploads/${photo.filename}`;
+    const g = await prisma.galleries.create({ data: { product_id: id, photo: path, created_at: new Date(), updated_at: new Date() } });
+    return { id: Number(g.id), url: imageUrl(path) };
+  }
+
+  @Delete('products/:id/gallery/:galleryId')
+  async deleteGallery(@Param('id', ParseIntPipe) id: number, @Param('galleryId') galleryId: string) {
+    await prisma.galleries.deleteMany({ where: { id: BigInt(galleryId), product_id: id } });
     return { ok: true };
   }
 

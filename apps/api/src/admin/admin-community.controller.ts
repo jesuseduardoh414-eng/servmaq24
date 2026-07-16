@@ -1,56 +1,22 @@
 import {
   BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe,
-  Patch, Post, Query, Req, UseGuards,
+  Patch, Query, UseGuards,
 } from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
-import { z } from 'zod';
 import { prisma } from '@maqserv/db';
-import { AdminGuard, type AdminRequest } from './admin-auth';
+import { productSlug } from '@maqserv/config';
+import { AdminGuard } from './admin-auth';
+import { NotificationsService } from '../notifications/notifications.service';
 
-/** Comunidad: usuarios, reseñas del sitio y comentarios de producto. */
+/** Comunidad: reseñas del sitio, comentarios y preguntas de producto. */
 @Controller('admin')
 @UseGuards(AdminGuard)
 export class AdminCommunityController {
+  constructor(private readonly notifications: NotificationsService) {}
+
   // ---- Usuarios ----
 
-  @Get('users')
-  async users(@Query('page') page?: string, @Query('search') search?: string) {
-    const p = Math.max(1, Number(page ?? 1) || 1);
-    const where: Record<string, unknown> = {};
-    if (search) {
-      where.OR = [{ name: { contains: search } }, { email: { contains: search } }];
-    }
-    const [total, rows] = await Promise.all([
-      prisma.users.count({ where }),
-      prisma.users.findMany({
-        where,
-        orderBy: { id: 'desc' },
-        skip: (p - 1) * 20,
-        take: 20,
-        select: { id: true, name: true, email: true, phone: true, city: true, is_vendor: true, created_at: true },
-      }),
-    ]);
-    // Conteo de órdenes por usuario (solo los de la página)
-    const counts = await prisma.orders.groupBy({
-      by: ['user_id'],
-      where: { user_id: { in: rows.map((u) => u.id) } },
-      _count: { _all: true },
-    });
-    const orderMap = new Map(counts.map((c) => [c.user_id, c._count._all]));
-    return {
-      total, page: p, pages: Math.max(1, Math.ceil(total / 20)),
-      items: rows.map((u) => ({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        phone: u.phone,
-        city: u.city,
-        isVendor: u.is_vendor === 2,
-        orders: orderMap.get(u.id) ?? 0,
-        createdAt: u.created_at ? u.created_at.toISOString() : null,
-      })),
-    };
-  }
+  // Clientes: ver `admin-customers.controller.ts`. Vivían aquí, pero no son
+  // "comunidad" y la búsqueda distinguía mayúsculas (faltaba `mode: 'insensitive'`).
 
   // ---- Reseñas del sitio (status 0 = pendiente de aprobación) ----
 
@@ -86,78 +52,12 @@ export class AdminCommunityController {
     return { ok: true };
   }
 
-  // ---- Gestión de administradores ----
+  // Administradores: ver `admin-admins.controller.ts`. Se separó porque crear un
+  // admin exige TAMBIÉN el usuario de Supabase Auth: aquí solo se creaba la fila y
+  // el administrador nuevo NO podía entrar.
 
-  @Get('admins')
-  async admins() {
-    const rows = await prisma.admins.findMany({ orderBy: { id: 'asc' } });
-    return rows.map((a) => ({ id: a.id, name: a.name, email: a.email, role: a.role, status: a.status }));
-  }
-
-  @Post('admins')
-  async createAdmin(@Body() body: unknown) {
-    const schema = z.object({
-      name: z.string().min(2).max(100),
-      email: z.string().email().max(190),
-      password: z.string().min(8).max(100),
-      phone: z.string().max(50).optional(),
-    });
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) throw new BadRequestException(parsed.error.issues[0]?.message ?? 'Datos inválidos');
-    const dup = await prisma.admins.findUnique({ where: { email: parsed.data.email } });
-    if (dup) throw new BadRequestException('Ya existe un administrador con ese correo');
-    const a = await prisma.admins.create({
-      data: {
-        name: parsed.data.name,
-        email: parsed.data.email,
-        phone: parsed.data.phone ?? '',
-        password: await bcrypt.hash(parsed.data.password, 10),
-        role: 'Administrator',
-        status: 1,
-        created_at: new Date(),
-        updated_at: new Date(),
-      },
-    });
-    return { id: a.id };
-  }
-
-  @Patch('admins/:id')
-  async updateAdmin(@Req() req: AdminRequest, @Param('id', ParseIntPipe) id: number, @Body() body: unknown) {
-    const schema = z.object({
-      name: z.string().min(2).max(100).optional(),
-      password: z.string().min(8).max(100).optional(),
-      status: z.coerce.number().int().min(0).max(1).optional(),
-    });
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) throw new BadRequestException('Datos inválidos');
-    // Nadie se desactiva a sí mismo (evita quedarse sin acceso)
-    if (parsed.data.status === 0 && id === req.adminId) {
-      throw new BadRequestException('No puedes desactivar tu propia cuenta');
-    }
-    await prisma.admins.update({
-      where: { id },
-      data: {
-        ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
-        ...(parsed.data.password !== undefined ? { password: await bcrypt.hash(parsed.data.password, 10) } : {}),
-        ...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}),
-        updated_at: new Date(),
-      },
-    });
-    return { ok: true };
-  }
-
-  // ---- Suscriptores del newsletter ----
-
-  @Get('subscribers')
-  async subscribers() {
-    return prisma.subscribers.findMany({ orderBy: { id: 'desc' } });
-  }
-
-  @Delete('subscribers/:id')
-  async deleteSubscriber(@Param('id', ParseIntPipe) id: number) {
-    await prisma.subscribers.delete({ where: { id } });
-    return { ok: true };
-  }
+  // Suscriptores: ver `admin-subscribers.controller.ts` (lista + exportar + sync a
+  // Perfex, que era un endpoint sin botón en ningún lado).
 
   // ---- Comentarios de producto ----
 
@@ -246,7 +146,27 @@ export class AdminCommunityController {
       if (![0, 1].includes(fe)) throw new BadRequestException('featured debe ser 0 o 1');
       data.featured = fe;
     }
+    const before = await prisma.product_questions.findUnique({
+      where: { id },
+      select: { user_id: true, product_id: true, answer: true },
+    });
     await prisma.product_questions.update({ where: { id }, data });
+
+    // Aviso solo cuando se responde por primera vez (no al ocultar/destacar ni al reeditar).
+    if (data.answer && !before?.answer && before?.user_id) {
+      const p = await prisma.products.findUnique({
+        where: { id: before.product_id },
+        select: { id: true, name: true },
+      });
+      await this.notifications.push({
+        userId: before.user_id,
+        type: 'question_answered',
+        title: p ? `Respondimos tu pregunta sobre ${p.name}` : 'Respondimos tu pregunta',
+        body: data.answer.slice(0, 200),
+        link: p ? `/productos/${productSlug(p.name, p.id)}` : null,
+        productId: before.product_id,
+      });
+    }
     return { ok: true };
   }
 

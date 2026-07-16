@@ -42,7 +42,15 @@ body {
   font-size: var(--text-base);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  /* Guarda de desbordamiento: los adornos posicionados fuera de caja (anillo del
+     hero, insignias en `right: -18px`…) no deben crear scroll lateral.
+     `clip` y NO `hidden`: `hidden` convierte al body en contenedor de scroll y
+     eso rompe el `position: sticky` del header. */
+  overflow-x: clip;
 }
+
+/* Nada desborda a lo ancho por una imagen sin caja. */
+img, svg, video { max-width: 100%; }
 
 h1, h2, h3, h4 {
   font-family: var(--font-heading);
@@ -117,6 +125,50 @@ details.faq[open] .faq-plus { transform: rotate(45deg); }
   .hero-visual { display: none !important; }
 }
 
+/* ============================================================
+   SECCIONES DEL HOME EN MÓVIL/TABLET
+   ============================================================ */
+
+/* La descripción del sector se recorta a 3 líneas: la tarjeta tiene alto fijo
+   (token `cardHeight`) y un texto largo empujaba el "Explorar equipos →" fuera
+   de la tarjeta. Por eso el componente NO trae `display` inline. */
+.sector-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 900px) {
+  /* Imagen arriba, texto abajo: a dos columnas en tablet quedaban ~356px por
+     lado y ni el titular ni las 3 cifras entraban bien. */
+  .why-grid { grid-template-columns: 1fr !important; gap: 36px !important; }
+  /* La insignia de años se dibuja en `right: -18px` (fuera del marco, a
+     propósito). En móvil eso la sacaba de la pantalla. */
+  .why-badge { right: 8px !important; top: 12px !important; padding: 12px 15px !important; }
+  /* El visual de «por qué elegirnos» no necesita 420px de alto en móvil. */
+  .why-visual { min-height: 280px !important; }
+}
+
+@media (max-width: 600px) {
+  /* Las 3 cifras (equipos / proyectos / clientes) no caben en una fila:
+     a 130px por celda el número se partía. */
+  .why-stats { grid-template-columns: 1fr 1fr !important; }
+  .why-stats > div { border-right: none !important; }
+  .why-stats > div:first-child { grid-column: 1 / -1; border-bottom: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+}
+
+/* Newsletter del footer: título e input lado a lado solo cuando hay sitio.
+   Apilado el input recupera el ancho completo (antes se salía de la caja). */
+@media (max-width: 760px) {
+  .nl-box { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 460px) {
+  .nl-form { flex-direction: column !important; }
+  .nl-form input, .nl-form button { width: 100%; }
+}
+
 /* Vista de categorías (/categorias): grid responsivo + destacada apilada. */
 @media (max-width: 980px) {
   .cat-grid { grid-template-columns: repeat(2, 1fr) !important; }
@@ -126,22 +178,150 @@ details.faq[open] .faq-plus { transform: rotate(45deg); }
   .cat-grid { grid-template-columns: 1fr !important; }
 }
 
-/* Parrilla de productos del catálogo: 4 columnas fijas en desktop (tarjetas
-   grandes, sin recortes), reduce en pantallas menores. */
-.prod-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; }
-@media (max-width: 1060px) { .prod-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 720px) { .prod-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Parrilla de productos del catálogo. `auto-fill` + mínimo de 260px en vez de
+   un número fijo de columnas por breakpoint: la rejilla convive con la barra de
+   filtros, así que su ancho NO es el de la ventana y los breakpoints fijos se
+   equivocaban (a 768px daban 3 columnas de 224px y el botón "Agregar" se salía
+   de la tarjeta). Así nunca baja de 260px, que es lo que mide el pie. */
+.prod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; }
+/* Una sola columna cuando ni 260px caben (móvil con el padding del container). */
 @media (max-width: 470px) { .prod-grid { grid-template-columns: 1fr; } }
+
+/* ---- Tarjeta de producto: se adapta a SU ancho, no al de la ventana ---- */
+.prod-card { container-type: inline-size; }
+/* Bajo 265px el pie no puede llevar precio y botón en la misma línea. */
+@container (max-width: 265px) {
+  .prod-card-foot { flex-direction: column; align-items: stretch !important; gap: 12px !important; }
+  .prod-card-actions { flex-direction: row !important; align-items: center !important; justify-content: space-between; width: 100%; }
+}
 
 /* Iconos del header (bare): hover circular suave. */
 .hdr-icon { transition: background .15s ease, color .15s ease; }
 .hdr-icon:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); color: var(--color-text) !important; }
+
+/* ============================================================
+   HEADER RESPONSIVO
+   Escritorio (≥1024px): logo + nav horizontal + todas las acciones.
+   Móvil/tablet (<1024px): logo + buscar + carrito + hamburguesa; el resto
+   (nav, sesión, favoritos, avisos, tema) se muda al drawer de MobileNav.
+   El corte es 1024 y no 768 porque a ~820px la nav ya se partía en 3 renglones.
+   Los `!important` son para ganarle a los estilos inline de los componentes.
+   ============================================================ */
+.hdr-logo-img { height: 46px; }
+.hdr-burger {
+  display: none; /* en escritorio manda .hdr-nav */
+  width: 42px; height: 42px; flex-shrink: 0;
+  align-items: center; justify-content: center;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: transparent; color: var(--color-text); cursor: pointer;
+}
+.hdr-burger:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+
+@media (max-width: 1023px) {
+  .hdr-nav, .hdr-theme, .hdr-auth, .hdr-fav { display: none !important; }
+  .hdr-actions { margin-left: auto; }
+  .hdr-burger { display: inline-flex; }
+  .hdr-logo-img { height: 38px; }
+  /* La barra superior deja solo el teléfono: el resto está en el drawer. */
+  .tb-email, .tb-hours, .tb-right { display: none !important; }
+  .tb-row { flex-wrap: nowrap !important; }
+}
+
+/* ---- Drawer de navegación (móvil/tablet) ---- */
+.mnav-scrim {
+  position: fixed; inset: 0; z-index: 90;
+  background: color-mix(in srgb, var(--color-secondary) 55%, transparent);
+  backdrop-filter: blur(2px);
+  animation: mnavFade .2s ease;
+}
+.mnav-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 91;
+  width: min(340px, 86vw);
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 14px 16px calc(20px + env(safe-area-inset-bottom));
+  background: var(--color-bg);
+  border-left: 1px solid var(--color-border);
+  box-shadow: -20px 0 50px -20px color-mix(in srgb, var(--color-text) 40%, transparent);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: mnavIn .22s cubic-bezier(.2, .7, .2, 1);
+}
+@keyframes mnavFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mnavIn { from { transform: translateX(100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .mnav-panel, .mnav-scrim { animation: none; }
+}
+
+.mnav-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.mnav-title {
+  flex: 1; font-weight: 700; font-size: 12px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--color-text-muted);
+}
+.mnav-close {
+  width: 38px; height: 38px; flex-shrink: 0; display: inline-flex;
+  align-items: center; justify-content: center;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: transparent; color: var(--color-text); cursor: pointer;
+}
+.mnav-close:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+
+.mnav-links { display: flex; flex-direction: column; }
+.mnav-link {
+  /* 46px de alto: objetivo táctil cómodo (recomendación WCAG 2.5.5). */
+  display: flex; align-items: center; min-height: 46px; padding: 0 12px;
+  border-radius: var(--radius-md);
+  color: var(--color-text); text-decoration: none;
+  font-size: 15.5px; font-weight: 600;
+}
+.mnav-link:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.mnav-link.is-active { color: var(--color-primary); }
+.mnav-link.is-sub { font-size: 14px; font-weight: 500; color: var(--color-text-muted); min-height: 42px; }
+.mnav-logout {
+  width: 100%; border: none; background: none; cursor: pointer;
+  font-family: var(--font-sans); text-align: left; color: var(--color-error);
+}
+.mnav-sep { height: 1px; background: var(--color-border); margin: 12px 0; }
+
+.mnav-auth { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mnav-btn {
+  display: flex; align-items: center; justify-content: center; min-height: 46px;
+  border-radius: var(--radius-md); font-weight: 700; font-size: 14.5px; text-decoration: none;
+}
+.mnav-btn.is-ghost { border: 1px solid var(--color-border); color: var(--color-text); }
+.mnav-btn.is-primary { background: var(--color-primary); color: var(--color-primary-fg); }
+
+.mnav-user { display: flex; align-items: center; gap: 11px; padding: 4px 12px 12px; }
+.mnav-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center;
+  background: var(--color-primary); color: var(--color-primary-fg); font-weight: 800; font-size: 15px;
+}
+.mnav-user-text { display: flex; flex-direction: column; overflow: hidden; }
+.mnav-user-name { font-weight: 700; font-size: 14px; color: var(--color-text); }
+.mnav-user-mail { font-size: 11.5px; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.mnav-contact { display: flex; flex-direction: column; gap: 10px; margin-top: auto; padding: 18px 12px 0; }
+.mnav-contact a { color: var(--color-text-muted); text-decoration: none; font-size: 13px; }
 
 /* Chip de categoría del catálogo (inactivo): resalta al pasar el cursor. */
 .cat-chip-quiet:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent) !important; color: var(--color-text) !important; }
 
 /* Opción del dropdown de filtros: hover suave. */
 .filter-opt:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent) !important; }
+
+/* Filtros del catálogo en móvil: dos por fila. Cada botón pide `minWidth:168`
+   pero su texto lo empujaba a ~190px, así que en una fila flex solo entraba
+   UNO y la mitad del ancho quedaba vacía. En rejilla se reparten el ancho y el
+   valor se recorta con puntos suspensivos. */
+@media (max-width: 620px) {
+  .cat-filters { display: grid !important; grid-template-columns: 1fr 1fr; align-items: stretch !important; }
+  .cat-filters > div { min-width: 0; }
+  .cat-filters > div > button { min-width: 0 !important; width: 100%; height: 100%; }
+  /* El desplegable se ancla al botón: que no se salga por el borde derecho. */
+  .cat-filters > div:nth-child(even) [role="listbox"] { left: auto; right: 0; }
+}
+@media (max-width: 360px) {
+  .cat-filters { grid-template-columns: 1fr; }
+}
 
 /* Fila de categorías del catálogo: scroll horizontal (una sola línea). El
    scrollbar está oculto por defecto y aparece —delgado y sutil— solo al pasar
@@ -181,6 +361,9 @@ details.faq[open] .faq-plus { transform: rotate(45deg); }
 @media (max-width: 940px) {
   .qs-hero { grid-template-columns: 1fr !important; gap: 36px !important; }
   .qs-cards-3 { grid-template-columns: repeat(2, 1fr) !important; }
+  /* Los 4 valores en fila piden ~200px cada uno (su min-content): no caben
+     en tablet. Este escalón faltaba y /quienes-somos hacía scroll lateral. */
+  .qs-cards-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .qs-timeline { grid-template-columns: repeat(2, 1fr) !important; gap: 30px 18px !important; }
   .qs-timeline > [aria-hidden] { display: none !important; }
 }
@@ -188,10 +371,16 @@ details.faq[open] .faq-plus { transform: rotate(45deg); }
   .qs-stats { grid-template-columns: repeat(2, 1fr) !important; gap: 30px 12px !important; }
   .qs-stats > div { border-right: none !important; }
   .qs-cards-3 { grid-template-columns: 1fr !important; }
-  .qs-cards-4 { grid-template-columns: repeat(2, 1fr) !important; }
+  /* `minmax(0, 1fr)` y no `1fr`: con `1fr` la columna nunca baja de su
+     min-content (aquí 201px) y dos de esas no caben en 390px → scroll lateral. */
+  .qs-cards-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .qs-timeline { grid-template-columns: 1fr !important; }
-  .qs-cta { flex-direction: column !important; align-items: flex-start !important; }
+  .qs-cta { flex-direction: column !important; align-items: flex-start !important; padding: 40px 26px !important; }
   .qs-hero-media { grid-template-rows: 150px 150px !important; }
+}
+@media (max-width: 520px) {
+  /* Dos valores por fila dejan el texto en una columna de ~170px: se apilan. */
+  .qs-cards-4 { grid-template-columns: 1fr !important; }
 }
 
 /* Detalle de sector estratégico: HTML enriquecido + responsive. */

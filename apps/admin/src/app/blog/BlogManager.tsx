@@ -21,10 +21,16 @@ export interface BlogRow {
 
 const cv = (es: Record<string, string>, k: string, def = '') => es[k] ?? def;
 
-interface Head { eyebrow: string; title: string; subtitle: string }
+/** Textos del hero de /blog + los de la sección del home (dos sitios distintos). */
+interface Head {
+  eyebrow: string; title: string; subtitle: string;
+  homeEyebrow: string; homeTitle: string; homeReadMore: string; homeLimit: number;
+}
 
-export function BlogManager({ blogs, themeId, copys, tokens }: {
+export function BlogManager({ blogs, themeId, copys, tokens, sectionEnabled }: {
   blogs: BlogRow[]; themeId: number | null; copys: Copys; tokens: ThemeTokens;
+  /** Si la sección `home.blog` está encendida; la visibilidad se maneja en Temas. */
+  sectionEnabled: boolean;
 }) {
   const router = useRouter();
 
@@ -34,8 +40,12 @@ export function BlogManager({ blogs, themeId, copys, tokens }: {
       eyebrow: cv(es, 'blog.hero.eyebrow', 'Diario de obra · Nº 24'),
       title: cv(es, 'blog.hero.title', 'Bitácora'),
       subtitle: cv(es, 'blog.hero.subtitle', 'Noticias, guías y buenas prácticas sobre maquinaria pesada — directo desde el terreno.'),
+      homeEyebrow: cv(es, 'home.blog.eyebrow', 'Bitácora'),
+      homeTitle: cv(es, 'home.blog.title', 'Últimas noticias'),
+      homeReadMore: cv(es, 'home.blog.readMore', 'Leer más'),
+      homeLimit: tokens.blog?.limit ?? 3,
     };
-  }, [copys]);
+  }, [copys, tokens]);
 
   const [head, setHead] = useState<Head>(initial);
   const [savedHead, setSavedHead] = useState<Head>(initial);
@@ -61,7 +71,10 @@ export function BlogManager({ blogs, themeId, copys, tokens }: {
       es['blog.hero.eyebrow'] = head.eyebrow;
       es['blog.hero.title'] = head.title;
       es['blog.hero.subtitle'] = head.subtitle;
-      const body = { tokens, copys: { ...copys, es } };
+      es['home.blog.eyebrow'] = head.homeEyebrow;
+      es['home.blog.title'] = head.homeTitle;
+      es['home.blog.readMore'] = head.homeReadMore;
+      const body = { tokens: { ...tokens, blog: { limit: head.homeLimit } }, copys: { ...copys, es } };
       const r2 = await fetch(`/api/admin/themes/${themeId}/draft`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!r2.ok) throw new Error('No se pudieron guardar los textos');
       const r3 = await fetch(`/api/admin/themes/${themeId}/publish`, { method: 'POST' });
@@ -151,6 +164,53 @@ export function BlogManager({ blogs, themeId, copys, tokens }: {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Sección del home: es OTRO sitio distinto del hero de /blog, y sus textos
+          solo se podían tocar desde la tabla cruda de copys en Temas. */}
+      <div style={{ ...cardStyle, display: 'grid', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(245,184,30,0.14)', color: D.amber, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              <i className="ph ph-house" style={{ fontSize: 19 }} />
+            </div>
+            <div>
+              <h3 style={h3Style}>Adelanto en el inicio</h3>
+              <p style={{ margin: '3px 0 0', fontSize: 12, color: D.muted }}>La banda de últimas entradas que sale en la página principal.</p>
+            </div>
+          </div>
+          {/* La visibilidad se gestiona en Temas; aquí solo se avisa. */}
+          {!sectionEnabled ? (
+            <Link href="/temas" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 700, padding: '7px 12px', borderRadius: 999, border: '1px solid rgba(245,184,30,0.35)', background: 'rgba(245,184,30,0.1)', color: D.amber, textDecoration: 'none' }}>
+              <i className="ph ph-eye-slash" style={{ fontSize: 14 }} /> Oculta en el inicio · activar
+            </Link>
+          ) : null}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14 }}>
+          <Field label="Línea pequeña (eyebrow)">
+            <input value={head.homeEyebrow} onChange={(e) => setH('homeEyebrow', e.target.value)} placeholder="Bitácora" style={inputStyle} />
+          </Field>
+          <Field label="Título de la sección">
+            <input value={head.homeTitle} onChange={(e) => setH('homeTitle', e.target.value)} placeholder="Últimas noticias" style={inputStyle} />
+          </Field>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14 }}>
+          <Field label="Texto del enlace de cada tarjeta">
+            <input value={head.homeReadMore} onChange={(e) => setH('homeReadMore', e.target.value)} placeholder="Leer más" style={inputStyle} />
+          </Field>
+          <Field label="Cuántas entradas adelantar">
+            <input
+              type="number" min={1} max={12}
+              value={head.homeLimit}
+              onChange={(e) => setH('homeLimit', Math.max(1, Math.min(12, Number(e.target.value) || 1)))}
+              style={inputStyle}
+            />
+          </Field>
+        </div>
+        <p style={{ margin: 0, fontSize: 12, color: D.muted }}>
+          Se guarda con el botón “Guardar y publicar” de arriba, junto con el encabezado.
+        </p>
       </div>
 
       {/* Entradas */}

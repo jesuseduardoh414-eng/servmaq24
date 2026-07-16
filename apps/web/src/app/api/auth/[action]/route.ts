@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SESSION_COOKIE, REFRESH_COOKIE } from '@/lib/session';
+import { clientIpHeaders } from '@/lib/client-ip';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -40,14 +41,27 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ action: st
     return res;
   }
 
+  // Restablecer contraseña: siempre respondemos ok (anti-enumeración).
+  if (action === 'forgot') {
+    const body = await req.json().catch(() => null);
+    const apiRes = await fetch(`${API_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...clientIpHeaders(req) },
+      body: JSON.stringify({ email: body?.email }),
+    });
+    const data = await apiRes.json().catch(() => ({ ok: true }));
+    return NextResponse.json(data, { status: apiRes.ok ? 200 : apiRes.status });
+  }
+
   if (action !== 'login' && action !== 'register') {
     return NextResponse.json({ message: 'Acción inválida' }, { status: 404 });
   }
 
   const body = await req.json().catch(() => null);
+  const remember = body?.remember !== false; // login: casilla; register: siempre recuerda
   const apiRes = await fetch(`${API_URL}/auth/${action}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...clientIpHeaders(req) },
     body: JSON.stringify(body),
   });
   const data = await apiRes.json();
@@ -57,14 +71,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ action: st
   }
 
   const res = NextResponse.json({ user: data.user });
-  // La cookie vive 7 días, pero el access token de Supabase expira en minutos;
-  // el middleware lo renueva con el refresh token antes de que caduque.
+  // Con "recordar": cookie de 7 días. Sin recordar: cookie de sesión (expira al cerrar
+  // el navegador). El access token de Supabase se renueva por el middleware.
   const opts = {
     httpOnly: true,
     sameSite: 'lax' as const,
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 7,
     path: '/',
+    ...(remember ? { maxAge: 60 * 60 * 24 * 7 } : {}),
   };
   res.cookies.set(SESSION_COOKIE, data.token, opts);
   if (data.refresh_token) res.cookies.set(REFRESH_COOKIE, data.refresh_token, opts);

@@ -1,4 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ContentService } from './content.service';
 
 @Controller('content')
@@ -30,11 +31,6 @@ export class ContentController {
     return this.content.services();
   }
 
-  @Get('banners')
-  banners() {
-    return this.content.banners();
-  }
-
   @Get('blogs')
   blogs(@Query('limit') limit?: string) {
     return this.content.blogs(limit ? Number(limit) : undefined);
@@ -50,16 +46,15 @@ export class ContentController {
     return this.content.infSitio();
   }
 
-  @Get('success-cases')
-  successCases() {
-    return this.content.successCases();
-  }
-
+  // Formularios abiertos, sin sesión: son a los que llega el spam automatizado y cada
+  // envío deja un lead en el CRM. 5 por minuto sobra para una persona escribiendo.
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('contact')
   contact(@Body() body: { name?: string; email?: string; phone?: string; company?: string; need?: string; message?: string }) {
     return this.content.contactMessage(body ?? {});
   }
 
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('subscribe')
   subscribe(@Body() body: { email?: string }) {
     const email = String(body?.email ?? '').trim().toLowerCase();

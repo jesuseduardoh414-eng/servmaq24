@@ -7,10 +7,11 @@ import { ProductCard } from '@/components/ProductCard';
 import { Pagination } from '@/components/Pagination';
 import { Band } from '@/components/Band';
 import { CatalogFilters } from '@/components/CatalogFilters';
+import { filtersToQuery, hasFilters, type CatalogSearch } from '@/lib/catalog-filters';
 
-type Search = { q?: string; categoria?: string; subcategoria?: string; page?: string };
+type Search = { q?: string; categoria?: string; subcategoria?: string; page?: string } & CatalogSearch;
 
-const CONTAINER: React.CSSProperties = { maxWidth: 1320, margin: '0 auto', padding: '0 26px' };
+const CONTAINER: React.CSSProperties = { maxWidth: 1320, margin: '0 auto', padding: '0 clamp(16px, 4vw, 26px)' };
 
 export async function generateMetadata(): Promise<Metadata> {
   const theme = await getTheme();
@@ -23,7 +24,14 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
   const [theme, categories, result, subcategories] = await Promise.all([
     getTheme(),
     getCategories(),
-    getProducts({ page, search: sp.q, category: sp.categoria, subcategory: sp.subcategoria }),
+    getProducts({
+      page,
+      search: sp.q,
+      category: sp.categoria,
+      subcategory: sp.subcategoria,
+      // Precio / calificación / disponibilidad / orden: la barra los pone en la URL.
+      ...filtersToQuery(sp),
+    }),
     sp.categoria ? getSubcategories(sp.categoria).catch(() => []) : Promise.resolve([]),
   ]);
 
@@ -51,6 +59,10 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
     if (sp.q) params.set('q', sp.q);
     if (sp.categoria) params.set('categoria', sp.categoria);
     if (sp.subcategoria) params.set('subcategoria', sp.subcategoria);
+    // Los filtros viajan con la paginación: sin esto, pasar a la página 2 los perdía.
+    for (const k of ['precio', 'calif', 'disp', 'orden'] as const) {
+      if (sp[k]) params.set(k, sp[k]);
+    }
     if (p > 1) params.set('page', String(p));
     const qs = params.toString();
     return `/productos${qs ? `?${qs}` : ''}`;
@@ -135,7 +147,18 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
 
           {/* Productos — primer grupo (a todo lo ancho) */}
           {items.length === 0 ? (
-            <p style={{ color: 'var(--color-text-muted)', padding: '3rem 0', textAlign: 'center' }}>{t(theme, 'catalog.empty')}</p>
+            <div style={{ padding: '3rem 0', textAlign: 'center' }}>
+              <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{t(theme, 'catalog.empty')}</p>
+              {/* Con filtros puestos, "no hay nada" sin salida es un callejón. */}
+              {hasFilters(sp) ? (
+                <Link
+                  href={`/productos${sp.q ? `?q=${encodeURIComponent(sp.q)}` : ''}`}
+                  style={{ display: 'inline-block', marginTop: 14, fontSize: 14, fontWeight: 700, color: 'var(--color-primary)', textDecoration: 'none' }}
+                >
+                  Quitar los filtros →
+                </Link>
+              ) : null}
+            </div>
           ) : (
             <div className="prod-grid">
               {firstGroup.map((p) => (

@@ -1,5 +1,7 @@
 /** DTOs de cuenta y engagement: comentarios, wishlist, cupones, rastreo, perfil. */
 
+import type { OrderEvent, OrderShipping } from './orders';
+
 export interface ProductComment {
   id: number;
   author: string;
@@ -27,6 +29,7 @@ export interface CouponCheck {
   label: string | null;
 }
 
+/** Guía cargada en el sistema VIEJO (tabla `rastreos`). El módulo de envíos usa `events`. */
 export interface TrackingEntry {
   numTracking: string;
   nota: string | null;
@@ -36,9 +39,15 @@ export interface TrackingEntry {
 
 export interface TrackingResult {
   orderNumber: string;
+  /** Crudos del legacy: el front los traduce con `order-status.ts`. */
   status: string;
   paymentStatus: string;
   createdAt: string | null;
+  /** Envío. null en órdenes viejas que nunca pasaron por el módulo. */
+  shipping: OrderShipping | null;
+  hasRental: boolean;
+  /** Historial del envío, del más viejo al más nuevo. */
+  events: OrderEvent[];
   entries: TrackingEntry[];
 }
 

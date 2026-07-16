@@ -161,6 +161,22 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
   return (
     <div style={{ fontFamily: FONT, color: C.ink }}>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
+      <style>{`
+        /* Estas clases ya existían en el marcado pero nunca tuvieron CSS: las
+           6 columnas se encimaban en móvil. Cada fila pasa a tarjeta y el
+           formulario de alta se apila. */
+        @media (max-width: 900px) {
+          .cat-stats { grid-template-columns: 1fr 1fr !important; }
+          .cat-newgrid { grid-template-columns: 1fr !important; }
+          .cat-thead { display: none !important; }
+          .cat-row { display: flex !important; flex-wrap: wrap; align-items: center; gap: 10px 12px !important; padding: 16px !important; }
+          .cat-row > .cat-c-img { flex: 0 0 auto; }
+          /* base = resto del renglón tras la imagen (48px + 12 de gap) */
+          .cat-row > .cat-c-name { flex: 1 1 calc(100% - 60px); }
+          .cat-row > .cat-c-slug, .cat-row > .cat-c-prod, .cat-row > .cat-c-state { flex: 0 0 auto; }
+          .cat-row > .cat-c-actions { flex: 1 0 100%; }
+        }
+      `}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, marginBottom: 24, flexWrap: 'wrap' }}>
@@ -231,30 +247,30 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
           return (
             <div key={c.id} style={{ display: 'grid', gridTemplateColumns: GRID, gap: 16, padding: '14px 22px', borderBottom: `1px solid ${C.line}`, alignItems: 'center' }} className="cat-row">
               {/* Imagen */}
-              <div style={{ width: 48, height: 48, borderRadius: 11, overflow: 'hidden', background: C.panel3, display: 'grid', placeItems: 'center', color: C.dim }}>
+              <div className="cat-c-img" style={{ width: 48, height: 48, borderRadius: 11, overflow: 'hidden', background: C.panel3, display: 'grid', placeItems: 'center', color: C.dim }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {c.image ? <img src={c.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <i className="ph ph-image" style={{ fontSize: 17 }} />}
               </div>
               {/* Nombre */}
-              <div style={{ minWidth: 0 }}>
+              <div className="cat-c-name" style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 14.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
               </div>
               {/* Slug */}
-              <div style={{ fontSize: 13.5, color: C.muted, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.slug}</div>
+              <div className="cat-c-slug" style={{ fontSize: 13.5, color: C.muted, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.slug}</div>
               {/* Productos */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="cat-c-prod" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 64, height: 6, borderRadius: 999, background: C.panel3, overflow: 'hidden' }}><div style={{ height: '100%', width: `${pct}%`, background: c.productCount === 0 ? '#3a4150' : C.amber, borderRadius: 999 }} /></div>
                 <span style={{ fontSize: 13, fontWeight: 700, color: c.productCount === 0 ? C.dim : C.ink }}>{c.productCount}</span>
               </div>
               {/* Estado */}
-              <div>
+              <div className="cat-c-state">
                 <button type="button" onClick={() => toggle(c)} title="Activar / Desactivar" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
                   <span style={{ width: 40, height: 22, borderRadius: 999, background: c.status === 1 ? C.green : '#3a4150', position: 'relative', transition: 'background .25s', display: 'inline-block' }}><span style={{ position: 'absolute', top: 2, left: c.status === 1 ? 20 : 2, width: 18, height: 18, borderRadius: 999, background: '#fff', transition: 'left .25s', boxShadow: '0 2px 4px rgba(0,0,0,.4)' }} /></span>
                   <span style={{ fontSize: 12.5, fontWeight: 700, color: c.status === 1 ? C.green : C.dim }}>{c.status === 1 ? 'Activa' : 'Inactiva'}</span>
                 </button>
               </div>
               {/* Acciones */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+              <div className="cat-c-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
                 {confirming ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,92,92,.1)', border: '1px solid rgba(255,92,92,.3)', borderRadius: 10, padding: '6px 10px' }}>
                     <span style={{ fontSize: 12, color: C.red, fontWeight: 600 }}>¿Eliminar?</span>

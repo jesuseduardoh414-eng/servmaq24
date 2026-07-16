@@ -8,7 +8,7 @@ import { SiteHeader, SiteFooter } from '@/components/SiteHeader';
 import { CountUp } from '@/components/CountUp';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
-const CONTAINER: React.CSSProperties = { maxWidth: 1240, margin: '0 auto', padding: '0 26px' };
+const CONTAINER: React.CSSProperties = { maxWidth: 1240, margin: '0 auto', padding: '0 clamp(16px, 4vw, 26px)' };
 
 // Eyebrow dorado (oscurece el primario para leerse sobre fondo claro, sin salir del token).
 const GOLD = 'color-mix(in srgb, var(--color-primary) 82%, #000)';
@@ -61,6 +61,9 @@ export default async function AboutPage() {
   const reasons = allReasons.filter((r) => r.placement !== 'home');
   // Fallback defensivo: si la API aún sirve un tema sin el token nuevo, usa los defaults.
   const qs = theme.tokens.quienesSomos ?? defaultTheme.tokens.quienesSomos;
+  // Misma lista que la banda del home: antes esta página tenía la suya y decían
+  // marcas distintas.
+  const brands = theme.tokens.brands ?? defaultTheme.tokens.brands;
 
   const heroTitle = info?.titulo || 'Quiénes somos';
   const imgs = info?.imagenes ?? [];
@@ -197,12 +200,12 @@ export default async function AboutPage() {
         ) : null}
 
         {/* ===== MARCAS ===== */}
-        {qs.brands.length > 0 ? (
+        {brands.list.length > 0 ? (
           <section style={{ borderTop: '1px solid var(--color-border)' }}>
             <div style={{ ...CONTAINER, paddingTop: 52, paddingBottom: 52, textAlign: 'center' }}>
-              <p style={{ margin: '0 0 30px', fontSize: 13, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>{qs.brandsEyebrow}</p>
+              <p style={{ margin: '0 0 30px', fontSize: 13, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>{brands.eyebrow}</p>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 56, flexWrap: 'wrap' }}>
-                {qs.brands.map((b, i) => (
+                {brands.list.map((b, i) => (
                   <span key={i} style={{ fontFamily: 'var(--font-heading)', fontSize: 26, fontWeight: 900, letterSpacing: '.04em', color: 'color-mix(in srgb, var(--color-text-muted) 70%, transparent)' }}>{b}</span>
                 ))}
               </div>

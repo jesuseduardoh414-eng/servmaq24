@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { prisma } from '@maqserv/db';
 import { productSlug } from '@maqserv/config';
 import type {
-  BannerSet,
   BlogCard,
   BlogDetail,
   FaqItem,
@@ -137,21 +136,6 @@ export class ContentService {
     }));
   }
 
-  /** La tabla legacy es UNA fila con slots top1..top5 / bottom1..bottom2 (+ *l = link). */
-  async banners(): Promise<BannerSet> {
-    const b = await prisma.banners.findFirst();
-    if (!b) return { top: [], bottom: [] };
-    const slot = (img: string | null, link: string | null) =>
-      img ? [{ image: imageUrl(img) as string, link: link || null }] : [];
-    return {
-      top: [
-        ...slot(b.top1, b.top1l), ...slot(b.top2, b.top2l), ...slot(b.top3, b.top3l),
-        ...slot(b.top4, b.top4l), ...slot(b.top5, b.top5l),
-      ],
-      bottom: [...slot(b.bottom1, b.bottom1l), ...slot(b.bottom2, b.bottom2l)],
-    };
-  }
-
   private toBlogCard(b: {
     id: number; title: string; details: string; photo: string | null;
     created_at: Date | null; category?: string | null; source?: string | null; views?: number;
@@ -219,7 +203,7 @@ export class ContentService {
   async subscribe(email: string): Promise<{ ok: boolean }> {
     const exists = await prisma.subscribers.findUnique({ where: { email } });
     if (!exists) {
-      await prisma.subscribers.create({ data: { email } });
+      await prisma.subscribers.create({ data: { email, created_at: new Date() } });
       // fire-and-forget: el alta no depende de que Perfex responda
       void this.perfex.pushLead({ name: email, email, source: 'Newsletter' });
     }
@@ -240,17 +224,6 @@ export class ContentService {
     const need = String(data.need ?? '').trim();
     void this.perfex.pushLead({ name, email, source: `Contacto web${need ? ` · ${need}` : ''}` });
     return { ok: true };
-  }
-
-  /** Casos de éxito (tabla legacy portfolios: cliente + foto + reseña). */
-  async successCases() {
-    const rows = await prisma.portfolios.findMany({ orderBy: { id: 'desc' } });
-    return rows.map((p) => ({
-      id: p.id,
-      client: p.client,
-      review: p.review,
-      image: imageUrl(p.photo),
-    }));
   }
 
   /** FAQ del home: preguntas de clientes DESTACADAS por el admin (respondidas + visibles). */

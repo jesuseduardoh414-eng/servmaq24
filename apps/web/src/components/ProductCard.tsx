@@ -58,6 +58,9 @@ export function ProductCard({ product: p, theme, initialFaved = false }: { produ
         : null;
   const canAdd = !quoteMode && p.inStock && !p.isRental && p.price !== null;
   const spec = `${p.isRental ? 'Renta' : 'Venta'}${p.inStock ? ' · Disponible' : ' · Bajo pedido'}`;
+  // Cotizar SIEMPRE es posible desde la card: lleva al cotizador con este equipo cargado.
+  const quoteHref = `/cotizar?producto=${p.slug}`;
+  const quoteOnly = quoteMode || p.price === null; // sin precio público: cotizar es la acción principal
 
   function add() {
     cart.add({ productId: p.id, slug: p.slug, name: p.name, price: p.price ?? 0, image: p.image });
@@ -74,7 +77,11 @@ export function ProductCard({ product: p, theme, initialFaved = false }: { produ
   }
 
   return (
-    <div className="lift" style={{ position: 'relative', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
+    // `prod-card` = contenedor de container-query: el pie se reacomoda según el
+    // ancho de LA TARJETA, no el de la ventana. La card se usa en 5 rejillas
+    // distintas (home, catálogo, favoritos, tienda, relacionados) y con media
+    // queries había que acertarle a cada una.
+    <div className="lift prod-card" style={{ position: 'relative', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
       {/* Panel de imagen (radial claro, foto contenida sin recortar) */}
       <Link href={`/productos/${p.slug}`} style={{ position: 'relative', height: 210, display: 'block', overflow: 'hidden', background: PANEL }}>
         {p.image ? (
@@ -99,8 +106,8 @@ export function ProductCard({ product: p, theme, initialFaved = false }: { produ
         <Link href={`/productos/${p.slug}`} style={{ fontWeight: 700, fontSize: '15.5px', lineHeight: 1.3, margin: '8px 0 4px', color: 'var(--color-text)', textDecoration: 'none', minHeight: 40, display: 'block' }}>{p.name}</Link>
         <div style={{ fontSize: '12.5px', color: 'var(--color-text-muted)', fontWeight: 300 }}>{spec}</div>
 
-        <div style={{ marginTop: 'auto', paddingTop: 15, borderTop: '1px solid var(--color-border)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+        <div className="prod-card-foot" style={{ marginTop: 'auto', paddingTop: 15, borderTop: '1px solid var(--color-border)', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
+          <div className="prod-card-price" style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
             {quoteMode || p.price === null ? (
               <div style={{ fontWeight: 800, fontSize: '16px', color: 'var(--color-accent)', lineHeight: 1 }}>{t(theme, 'product.price.onQuote')}</div>
             ) : (
@@ -114,13 +121,22 @@ export function ProductCard({ product: p, theme, initialFaved = false }: { produ
               </>
             )}
           </div>
-          {canAdd ? (
-            <button type="button" onClick={add} style={addBtn}>
-              {added ? '✓ Agregado' : <><span style={{ fontSize: '14px', marginTop: -1 }}>+</span>Agregar</>}
-            </button>
-          ) : (
-            <Link href={`/productos/${p.slug}`} style={addBtn}>{quoteMode || p.price === null ? 'Cotizar' : 'Ver'}</Link>
-          )}
+          <div className="prod-card-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0 }}>
+            {quoteOnly ? (
+              <Link href={quoteHref} style={addBtn}>Cotizar</Link>
+            ) : (
+              <>
+                {canAdd ? (
+                  <button type="button" onClick={add} style={addBtn}>
+                    {added ? '✓ Agregado' : <><span style={{ fontSize: '14px', marginTop: -1 }}>+</span>Agregar</>}
+                  </button>
+                ) : (
+                  <Link href={`/productos/${p.slug}`} style={addBtn}>Ver</Link>
+                )}
+                <Link href={quoteHref} style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none', whiteSpace: 'nowrap' }}>Cotizar →</Link>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

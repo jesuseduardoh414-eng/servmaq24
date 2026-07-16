@@ -4,13 +4,24 @@ import { defaultTheme, themeSchema, type Theme } from '@maqserv/config';
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 /**
- * Política de caché de datos del sitio:
- *  - PROD: ISR 60s (rápido + invalidación bajo demanda al publicar).
- *  - DEV: sin caché (no-store) para ver los cambios del admin al instante,
- *    sin esperar la ventana de 60s.
+ * Política de caché de los datos del sitio (tema, productos, blog, sectores, reseñas…).
+ *
+ *  - PROD: ISR 60 s + invalidación bajo demanda al publicar.
+ *  - DEV: caché corta (5 s). Antes era `no-store`: cada visita —incluso volver a una
+ *    página ya vista— repetía las ~9 llamadas a la API, y con la BD a ~100 ms por viaje
+ *    eso costaba ~1 s por pantalla. Medido: home 1107 → 482 ms, ficha 1185 → 284 ms.
+ *
+ * El `no-store` estaba para ver los cambios de Diseño al instante. Eso NO se pierde:
+ * publicar un tema dispara `POST /api/revalidate` (admin-themes.controller.ts), que tira
+ * la caché de golpe. Requiere `REVALIDATE_SECRET` con el MISMO valor en la API y en la
+ * web — en local también. Sin él, un cambio tarda hasta 5 s en verse.
+ *
+ * OJO: el tema se cachea igual que el resto A PROPÓSITO. Dejarlo fresco cuesta ~300 ms
+ * por pantalla (no ~100): `getTheme()` bloquea, porque decide qué secciones se pintan y
+ * nada arranca hasta que responde. Medido: 482 → 778 ms.
  */
 export const CONTENT_CACHE: RequestInit =
-  process.env.NODE_ENV === 'production' ? { next: { revalidate: 60 } } : { cache: 'no-store' };
+  process.env.NODE_ENV === 'production' ? { next: { revalidate: 60 } } : { next: { revalidate: 5 } };
 
 /**
  * Tema activo desde la API (que lo lee de la BD).
@@ -27,7 +38,15 @@ export const getTheme = cache(async (): Promise<Theme> => {
   }
 });
 
-/** Resuelve un copy por clave e idioma, con la clave visible como fallback. */
+/**
+ * Resuelve un copy por clave e idioma.
+ *
+ * Cae al copy DEFAULT antes que a la clave: los temas guardados en BD se sellaron con
+ * los copys que existían ese día, así que un copy agregado después no está ahí y el
+ * sitio pintaba la clave cruda ("vendor.apply.sent") en la cara del usuario. Con este
+ * fallback, un copy nuevo funciona sin migrar la BD y sigue siendo editable si el
+ * admin lo sobrescribe. La clave queda solo como último recurso (typo en el código).
+ */
 export function t(theme: Theme, key: string, locale = 'es'): string {
-  return theme.copys[locale]?.[key] ?? key;
+  return theme.copys[locale]?.[key] ?? defaultTheme.copys[locale]?.[key] ?? key;
 }

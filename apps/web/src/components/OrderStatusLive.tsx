@@ -1,6 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { fetchRealtimeToken, supabaseBrowser } from '@/lib/supabase-browser';
+import { paymentStatusLabel, toneColors } from '@/lib/order-status';
+
+const MONO = "'Space Mono', ui-monospace, monospace";
 
 /**
  * Muestra el estado de pago del pedido y lo actualiza EN VIVO vía Supabase Realtime.
@@ -49,13 +52,19 @@ export function OrderStatusLive({
     };
   }, [orderNumber]);
 
+  const st = paymentStatusLabel(paymentStatus);
+  const c = toneColors(st.tone);
+
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', fontSize: 'var(--text-sm)', alignItems: 'center' }}>
-      <span style={{ color: 'var(--color-text-muted)' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', padding: '10px 0' }}>
+      <span style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.08em', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
         {label}
-        {live ? <span style={{ color: 'var(--color-primary)', marginLeft: '.4rem' }}>· en vivo</span> : null}
+        {live ? <span style={{ color: 'var(--color-primary)', marginLeft: 6 }} title="Se actualiza solo">· EN VIVO</span> : null}
       </span>
-      <strong>{paymentStatus}</strong>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, color: c.fg, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 100, padding: '5px 12px' }}>
+        <span style={{ width: 6, height: 6, borderRadius: 999, background: c.fg }} />
+        {st.text}
+      </span>
     </div>
   );
 }

@@ -27,6 +27,7 @@ export function FooterNewsletter({
 
   return (
     <div
+      className="nl-box"
       style={{
         background: 'color-mix(in srgb, var(--color-secondary) 88%, white)',
         border: '1px solid color-mix(in srgb, white 8%, transparent)',
@@ -61,7 +62,7 @@ export function FooterNewsletter({
           {labels.subtitle}
         </p>
       </div>
-      <form onSubmit={onSubmit} style={{ position: 'relative', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <form className="nl-form" onSubmit={onSubmit} style={{ position: 'relative', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <input
           name="email"
           type="email"

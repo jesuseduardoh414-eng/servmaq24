@@ -737,16 +737,27 @@ model mirrormx_customer_chat_user {
   last_activity DateTime @default(now()) @db.Timestamp(0)
 }
 
+/// Avisos al cliente. Las 244 filas legacy (2021) traen user_id NULL y solo apuntaban
+/// a un pedido; la política RLS `notif_own_select` (user_id = app_user_id) las excluye
+/// sola, y sin `type` tampoco las lista la API. Ya está en la publicación de Realtime.
 model notifications {
   id              Int       @id @default(autoincrement())
-  order_id        Int?     
+  order_id        Int?
   user_id         Int?
   vendor_id       Int?
   product_id      Int?
   conversation_id Int?
   is_read         Boolean   @default(false)
+  /// quote_answered | order_status | payment_confirmed | question_answered
+  type            String?   @db.VarChar(40)
+  title           String?   @db.VarChar(160)
+  body            String?   @db.Text
+  /// Ruta interna del sitio a la que lleva el aviso (p. ej. /pedido/ABC123)
+  link            String?   @db.VarChar(200)
   created_at      DateTime? @db.Timestamp(0)
   updated_at      DateTime? @db.Timestamp(0)
+
+  @@index([user_id, is_read], map: "notifications_user_read_idx")
 }
 
 model orders {
@@ -789,6 +800,52 @@ model orders {
   shipping_cost    Float?
   tax              Int?
   dp               Boolean?      @default(false)
+
+  // --- Módulo de envíos (columnas NUEVAS, aditivas) ---
+  // `status` de arriba es un ENUM de Postgres (pending|processing|completed|declined) y
+  // no admite los estados del flujo nuevo sin recrearlo, lo cual es riesgoso con datos
+  // reales. Por eso el envío vive aquí, en texto, y `status` se mantiene sincronizado a
+  // grueso desde LEGACY_STATUS (@maqserv/types). Ver `fulfillment.service.ts`.
+  // NOTA: `shipping` y `pickup_location` (arriba) son campos MUERTOS del sistema viejo:
+  // tienen datos en órdenes de 2021 pero el checkout nuevo nunca los llena. No usarlos.
+  fulfillment      String?       @db.VarChar(20)
+  ship_method      String?       @db.VarChar(20) // paqueteria | traslado | sucursal
+  carrier          String?       @db.VarChar(60) // paquetería (DHL, Estafeta…)
+  tracking         String?       @db.VarChar(80) // número de guía
+  ship_unit        String?       @db.VarChar(80) // unidad propia + operador
+  branch           String?       @db.VarChar(120) // sucursal de recolección (Diseño → Contacto)
+  scheduled_at     DateTime?     @db.Timestamp(0)
+  shipped_at       DateTime?     @db.Timestamp(0)
+  delivered_at     DateTime?     @db.Timestamp(0)
+  returned_at      DateTime?     @db.Timestamp(0) // solo renta: fecha de recolección
+  ship_notes       String?       @db.Text
+
+  // Candado de inventario (columna NUEVA). La orden RETIENE el stock que descontó al
+  // crearse; esto marca que ya lo devolvió, para no devolverlo dos veces. Hace falta
+  // porque el panel puede saltar a cualquier estado: sin esto, `recolectado` y luego
+  // `cancelado` sumarían el stock dos veces. Lo escribe SOLO `StockService.release()`.
+  stock_released   Boolean       @default(false)
+
+  events           order_events[]
+}
+
+/// Tabla NUEVA (no viene del Laravel viejo): historial de envío de cada orden.
+/// Lo escribe SOLO `FulfillmentService.setState()`; si alguien cambia `fulfillment`
+/// por fuera, el historial miente.
+model order_events {
+  id         Int      @id @default(autoincrement())
+  order_id   Int
+  /// Admin que hizo el cambio; null = automático (webhook de pago).
+  admin_id   Int?
+  from_state String?  @db.VarChar(20)
+  to_state   String   @db.VarChar(20)
+  note       String?  @db.Text
+  created_at DateTime @default(now()) @db.Timestamp(0)
+
+  order orders @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([order_id, id])
+  @@map("order_events")
 }
 
 model pages {
@@ -818,10 +875,14 @@ model pagesettings {
 }
 
 model payment_gateways {
-  id     Int    @id @default(autoincrement())
+  id     Int     @id @default(autoincrement())
   title  String
-  text   String @db.Text
-  status Int    @default(1) @db.SmallInt
+  text   String  @db.Text
+  status Int     @default(1) @db.SmallInt
+  /** Identificador del método: 'transferencia' | 'mercadopago'. */
+  code   String? @db.VarChar(30)
+  /** Credencial del proveedor (p. ej. MP access token). NUNCA se expone al público. */
+  secret String? @db.Text
 }
 
 model payments {
@@ -914,6 +975,7 @@ model products {
   rental_freight    Decimal?  @db.Decimal(10, 2)
   is_rental         Boolean   @default(false)
   certificacion_dc3 String?
+  specs             String?   @db.Text
 }
 
 model quote_emails {
@@ -1177,9 +1239,14 @@ model subcategories {
   status      Int    @default(1) @db.SmallInt
 }
 
+/// Boletín del footer. El sistema viejo guardaba SOLO el correo: sin fecha no se
+/// puede saber cuándo se suscribió alguien ni medir si la lista crece.
 model subscribers {
   id    Int    @id @default(autoincrement())
   email String @unique(map: "subscribers_email_unique")
+
+  /// Columna NUEVA (aditiva). null = viene del sistema viejo, que no la guardaba.
+  created_at DateTime? @db.Timestamp(0)
 }
 
 model subscriptions {
@@ -1335,6 +1402,9 @@ model withdraws {
   id         Int              @id @default(autoincrement())
   user_id    Int?
   method     String?          @db.VarChar(255)
+  // acc_email/iban/country/acc_name/address/swift son del Laravel viejo y están
+  // VACÍOS en las 0 filas reales: el formulario del vendedor nunca los llenó. Los
+  // datos de cobro van en `reference` ("CLABE 0123456789"). No construir sobre ellos.
   acc_email  String?          @db.VarChar(255)
   iban       String?          @db.VarChar(255)
   country    String?          @db.VarChar(255)
@@ -1348,6 +1418,10 @@ model withdraws {
   updated_at DateTime?        @db.Timestamp(0)
   status     withdraws_status @default(pending)
   type       String           @db.VarChar(10)
+
+  /// Columna NUEVA: por qué se rechazó (o nota al pagar). Rechazar el dinero de
+  /// alguien sin decirle por qué no es aceptable; el vendedor la ve en /vendedor/retiros.
+  admin_note String?          @db.Text
 }
 
 enum counters_type {

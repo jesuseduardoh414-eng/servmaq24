@@ -32,11 +32,12 @@ const fmt = (n: number | null) => '$' + Number(n ?? 0).toLocaleString('en-US');
 
 interface Form {
   name: string; brand: string; categoryId: number; price: string; oldPrice: string;
-  stock: string; description: string; isRental: boolean; rentalFreight: string; featured: boolean; status: number;
+  stock: string; short: string; description: string; specs: Array<{ label: string; value: string }>;
+  isRental: boolean; rentalFreight: string; featured: boolean; status: number;
 }
 
 export function ProductsManager({ initial, categories }: { initial: ProductRow[]; categories: CatOption[] }) {
-  const emptyForm: Form = { name: '', brand: '', categoryId: categories[0]?.id ?? 0, price: '', oldPrice: '', stock: '', description: '', isRental: false, rentalFreight: '', featured: false, status: 1 };
+  const emptyForm: Form = { name: '', brand: '', categoryId: categories[0]?.id ?? 0, price: '', oldPrice: '', stock: '', short: '', description: '', specs: [], isRental: false, rentalFreight: '', featured: false, status: 1 };
 
   const [items, setItems] = useState<ProductRow[]>(initial);
   const [query, setQuery] = useState('');
@@ -57,8 +58,34 @@ export function ProductsManager({ initial, categories }: { initial: ProductRow[]
   const [currentImage, setCurrentImage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [gallery, setGallery] = useState<Array<{ id: number; url: string }>>([]);
+  const [galBusy, setGalBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const galRef = useRef<HTMLInputElement>(null);
   const setF = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  async function uploadGallery(files: FileList | null) {
+    if (!files || !editingId) return;
+    const slots = 6 - gallery.length;
+    if (slots <= 0) { flash('Máximo 6 imágenes por producto', 'warn'); return; }
+    const toUpload = Array.from(files).slice(0, slots);
+    setGalBusy(true);
+    const added: Array<{ id: number; url: string }> = [];
+    for (const f of toUpload) {
+      const fd = new FormData();
+      fd.append('photo', f);
+      const r = await fetch(`/api/admin/catalog/products/${editingId}/gallery`, { method: 'POST', body: fd });
+      const d = await r.json().catch(() => null);
+      if (r.ok && d?.id) added.push(d); else flash(d?.message ?? 'No se pudo subir una imagen', 'warn');
+    }
+    if (added.length) setGallery((g) => [...g, ...added]);
+    if (files.length > slots) flash('Solo caben 6 imágenes; se subieron las primeras.', 'warn');
+    setGalBusy(false);
+  }
+  async function delGallery(gid: number) {
+    const r = await fetch(`/api/admin/catalog/products/${editingId}/gallery/${gid}`, { method: 'DELETE' });
+    if (r.ok) setGallery((g) => g.filter((x) => x.id !== gid)); else flash('No se pudo eliminar la imagen', 'warn');
+  }
 
   function flash(text: string, kind: 'ok' | 'warn' | 'trash' = 'ok') {
     setToast({ text, kind });
@@ -105,10 +132,11 @@ export function ProductsManager({ initial, categories }: { initial: ProductRow[]
   }
 
   function openNew() {
-    setEditingId(null); setForm(emptyForm); setFile(null); setPreview(null); setCurrentImage(null); setConfirmId(null); setModalOpen(true);
+    setEditingId(null); setForm(emptyForm); setFile(null); setPreview(null); setCurrentImage(null); setConfirmId(null); setGallery([]); setModalOpen(true);
   }
   async function openEdit(p: ProductRow) {
-    setEditingId(p.id); setConfirmId(null); setFile(null); setPreview(null); setCurrentImage(p.image); setModalOpen(true);
+    setEditingId(p.id); setConfirmId(null); setFile(null); setPreview(null); setCurrentImage(p.image); setGallery([]); setModalOpen(true);
+    fetch(`/api/admin/catalog/products/${p.id}/gallery`).then((r) => (r.ok ? r.json() : [])).then((g) => setGallery(Array.isArray(g) ? g : [])).catch(() => setGallery([]));
     setForm({ ...emptyForm, name: p.name, brand: p.brand ?? '', price: p.price != null ? String(p.price) : '', stock: p.stock != null ? String(p.stock) : '', featured: p.featured, status: p.status, isRental: p.isRental });
     setLoadingDetail(true);
     try {
@@ -118,7 +146,8 @@ export function ProductsManager({ initial, categories }: { initial: ProductRow[]
         setForm({
           name: d.name ?? '', brand: d.brand ?? '', categoryId: d.categoryId ?? (categories[0]?.id ?? 0),
           price: d.price != null ? String(d.price) : '', oldPrice: d.oldPrice != null ? String(d.oldPrice) : '',
-          stock: d.stock != null ? String(d.stock) : '', description: d.description ?? '',
+          stock: d.stock != null ? String(d.stock) : '', short: d.short ?? '', description: d.description ?? '',
+          specs: Array.isArray(d.specs) ? d.specs.map((s: { label?: string; value?: string }) => ({ label: String(s.label ?? ''), value: String(s.value ?? '') })) : [],
           isRental: !!d.isRental, rentalFreight: d.rentalFreight != null ? String(d.rentalFreight) : '',
           featured: !!d.featured, status: d.status ?? 1,
         });
@@ -139,6 +168,8 @@ export function ProductsManager({ initial, categories }: { initial: ProductRow[]
       fd.append('price', String(parseFloat(form.price) || 0));
       if (form.oldPrice !== '') fd.append('oldPrice', String(parseFloat(form.oldPrice) || 0));
       fd.append('description', form.description.trim());
+      fd.append('short', form.short.trim());
+      fd.append('specs', JSON.stringify(form.specs.map((s) => ({ label: s.label.trim(), value: s.value.trim() })).filter((s) => s.label)));
       if (form.stock !== '') fd.append('stock', String(parseInt(form.stock, 10) || 0));
       if (form.brand.trim()) fd.append('brand', form.brand.trim());
       fd.append('isRental', form.isRental ? '1' : ''); // '' → z.coerce.boolean false
@@ -216,6 +247,24 @@ export function ProductsManager({ initial, categories }: { initial: ProductRow[]
   return (
     <div style={{ fontFamily: FONT, color: C.ink }}>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
+      <style>{`
+        /* Las 7 columnas de la tabla no caben en móvil: cada fila pasa a ser
+           una tarjeta (imagen + nombre arriba; categoría, precio, stock y
+           estado envueltos debajo; acciones en su propio renglón).
+           Se oculta la cabecera porque ya no encabeza nada. */
+        @media (max-width: 900px) {
+          .pr-stats { grid-template-columns: 1fr 1fr !important; }
+          .pr-head { display: none !important; }
+          .pr-row { display: flex !important; flex-wrap: wrap; align-items: center; gap: 10px 12px !important; padding: 16px !important; }
+          .pr-row > .pr-img { flex: 0 0 auto; }
+          /* base = ancho restante tras la imagen (48px + 12 de gap): así el
+             nombre agota el primer renglón y las demás celdas bajan juntas,
+             en vez de acomodarse distinto según lo largo que sea el nombre. */
+          .pr-row > .pr-name { flex: 1 1 calc(100% - 60px); }
+          .pr-row > .pr-cat, .pr-row > .pr-price, .pr-row > .pr-stock, .pr-row > .pr-state { flex: 0 0 auto; }
+          .pr-row > .pr-actions { flex: 1 0 100%; }
+        }
+      `}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, marginBottom: 24, flexWrap: 'wrap' }}>
@@ -227,7 +276,7 @@ export function ProductsManager({ initial, categories }: { initial: ProductRow[]
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 22 }}>
+      <div className="pr-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 22 }}>
         {statCard('Productos', stats.total, 'ph-cube', C.blue)}
         {statCard('Activos', stats.activos, 'ph-check-circle', C.green, C.green)}
         {statCard('Destacados', stats.destacados, 'ph-star', C.amber, C.amber)}
@@ -260,7 +309,7 @@ export function ProductsManager({ initial, categories }: { initial: ProductRow[]
 
       {/* Tabla */}
       <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 18, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 14, padding: '15px 22px', borderBottom: `1px solid ${C.line}`, fontSize: 11.5, letterSpacing: '.06em', color: C.dim, fontWeight: 700, textTransform: 'uppercase', alignItems: 'center' }}>
+        <div className="pr-head" style={{ display: 'grid', gridTemplateColumns: GRID, gap: 14, padding: '15px 22px', borderBottom: `1px solid ${C.line}`, fontSize: 11.5, letterSpacing: '.06em', color: C.dim, fontWeight: 700, textTransform: 'uppercase', alignItems: 'center' }}>
           <div /><div>Producto</div><div>Categoría</div><div>Precio</div><div>Stock</div><div>Estado</div><div style={{ textAlign: 'right' }}>Acciones</div>
         </div>
         {rows.length === 0 ? (
@@ -273,36 +322,36 @@ export function ProductsManager({ initial, categories }: { initial: ProductRow[]
           const s = stockInfo(p.stock);
           const confirming = confirmId === p.id;
           return (
-            <div key={p.id} style={{ display: 'grid', gridTemplateColumns: GRID, gap: 14, padding: '13px 22px', borderBottom: `1px solid ${C.line}`, alignItems: 'center' }}>
+            <div key={p.id} className="pr-row" style={{ display: 'grid', gridTemplateColumns: GRID, gap: 14, padding: '13px 22px', borderBottom: `1px solid ${C.line}`, alignItems: 'center' }}>
               {/* Imagen + estrella */}
-              <div style={{ position: 'relative', width: 48, height: 48, borderRadius: 11, overflow: 'hidden', background: C.panel3, display: 'grid', placeItems: 'center', color: C.dim }}>
+              <div className="pr-img" style={{ position: 'relative', width: 48, height: 48, borderRadius: 11, overflow: 'hidden', background: C.panel3, display: 'grid', placeItems: 'center', color: C.dim }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {p.image ? <img src={p.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <i className="ph ph-image" style={{ fontSize: 17 }} />}
                 {p.featured ? <span style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 999, background: C.amber, color: C.amberInk, fontSize: 11, display: 'grid', placeItems: 'center', boxShadow: '0 2px 6px rgba(0,0,0,.5)' }}><i className="ph ph-star" style={{ fontSize: 10 }} /></span> : null}
               </div>
               {/* Nombre + marca */}
-              <div style={{ minWidth: 0 }}>
+              <div className="pr-name" style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
                 <div style={{ fontSize: 12, color: C.dim, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.brand || '—'}</div>
               </div>
               {/* Categoría */}
-              <div style={{ minWidth: 0 }}>{p.categoryName ? <span style={{ display: 'inline-block', fontSize: 12, color: C.blue, fontWeight: 600, background: 'rgba(79,156,255,.1)', padding: '4px 10px', borderRadius: 999, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.categoryName}</span> : <span style={{ color: C.dim, fontSize: 12 }}>—</span>}</div>
+              <div className="pr-cat" style={{ minWidth: 0 }}>{p.categoryName ? <span style={{ display: 'inline-block', fontSize: 12, color: C.blue, fontWeight: 600, background: 'rgba(79,156,255,.1)', padding: '4px 10px', borderRadius: 999, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.categoryName}</span> : <span style={{ color: C.dim, fontSize: 12 }}>—</span>}</div>
               {/* Precio */}
-              <div style={{ fontWeight: 800, fontSize: 14.5 }}>{fmt(p.price)}</div>
+              <div className="pr-price" style={{ fontWeight: 800, fontSize: 14.5 }}>{fmt(p.price)}</div>
               {/* Stock */}
-              <div>
+              <div className="pr-stock">
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: s.color }}><span style={{ width: 7, height: 7, borderRadius: 999, background: s.color }} />{s.val}</span>
                 <div style={{ fontSize: 10.5, color: C.dim, fontWeight: 500, marginTop: 1 }}>{s.label}</div>
               </div>
               {/* Estado */}
-              <div>
+              <div className="pr-state">
                 <button type="button" onClick={() => toggleStatus(p)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
                   <Switch on={p.status === 1} />
                   <span style={{ fontSize: 12, fontWeight: 700, color: p.status === 1 ? C.green : C.dim }}>{p.status === 1 ? 'Activo' : 'Inactivo'}</span>
                 </button>
               </div>
               {/* Acciones */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+              <div className="pr-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
                 {confirming ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,92,92,.1)', border: '1px solid rgba(255,92,92,.3)', borderRadius: 10, padding: '6px 10px' }}>
                     <span style={{ fontSize: 12, color: C.red, fontWeight: 600 }}>¿Dar de baja?</span>
@@ -353,6 +402,27 @@ export function ProductsManager({ initial, categories }: { initial: ProductRow[]
                   <input ref={fileRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); setPreview(f ? URL.createObjectURL(f) : null); }} style={{ display: 'none' }} />
                 </div>
               </div>
+              {/* Galería (máx. 6) */}
+              {editingId ? (
+                <div>
+                  <label style={labelStyle}>Galería <span style={{ color: C.dim, fontWeight: 400 }}>· máx. 6 imágenes ({gallery.length}/6)</span></label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(76px, 1fr))', gap: 8 }}>
+                    {gallery.map((g) => (
+                      <div key={g.id} style={{ position: 'relative', height: 72, borderRadius: 10, overflow: 'hidden', background: C.panel3, border: `1px solid ${C.line}` }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={g.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button type="button" onClick={() => delGallery(g.id)} title="Quitar" style={{ position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 6, border: 'none', background: 'rgba(0,0,0,.6)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 11 }}><i className="ph ph-x" /></button>
+                      </div>
+                    ))}
+                    {gallery.length < 6 ? (
+                      <button type="button" onClick={() => galRef.current?.click()} disabled={galBusy} style={{ height: 72, borderRadius: 10, border: `1px dashed ${C.line2}`, background: C.panel2, color: C.muted, cursor: galBusy ? 'default' : 'pointer', display: 'grid', placeItems: 'center', fontSize: 20 }}>{galBusy ? <span style={{ fontSize: 11 }}>…</span> : <i className="ph ph-plus" />}</button>
+                    ) : null}
+                  </div>
+                  <input ref={galRef} type="file" accept="image/*" multiple onChange={(e) => { uploadGallery(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: C.dim, background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 10, padding: '10px 14px' }}>💡 Guarda el producto primero para agregar imágenes a la galería (máx. 6).</div>
+              )}
               {/* Nombre */}
               <div><label style={labelStyle}>Nombre del producto</label><input value={form.name} onChange={(e) => setF('name', e.target.value)} placeholder="Ej. Excavadora CAT 320" style={inputStyle} /></div>
               {/* Marca + Categoría */}
@@ -370,8 +440,24 @@ export function ProductsManager({ initial, categories }: { initial: ProductRow[]
                 <div><label style={labelStyle}>Stock</label><input value={form.stock} onChange={(e) => setF('stock', e.target.value)} type="number" placeholder="0" style={inputStyle} /></div>
                 {form.isRental ? <div><label style={labelStyle}>Flete de renta (opcional)</label><input value={form.rentalFreight} onChange={(e) => setF('rentalFreight', e.target.value)} type="number" placeholder="0" style={inputStyle} /></div> : null}
               </div>
+              {/* Descripción corta */}
+              <div><label style={labelStyle}>Descripción corta (resumen arriba de la ficha)</label><input value={form.short} onChange={(e) => setF('short', e.target.value)} placeholder="Miniexcavadora compacta para espacios reducidos…" style={inputStyle} /></div>
               {/* Descripción */}
               <div><label style={labelStyle}>Descripción</label><textarea value={form.description} onChange={(e) => setF('description', e.target.value)} rows={3} placeholder="Especificaciones, capacidad, condiciones…" style={{ ...inputStyle, height: 'auto', lineHeight: 1.5, resize: 'vertical' }} /></div>
+              {/* Ficha técnica */}
+              <div>
+                <label style={labelStyle}>Ficha técnica <span style={{ color: C.dim, fontWeight: 400 }}>· los primeros 3 salen como cuadros destacados</span></label>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {form.specs.map((s, i) => (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8, alignItems: 'center' }}>
+                      <input value={s.label} onChange={(e) => setF('specs', form.specs.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} placeholder="Peso operativo" style={{ ...inputStyle, padding: '10px 12px' }} />
+                      <input value={s.value} onChange={(e) => setF('specs', form.specs.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))} placeholder="3,500 kg" style={{ ...inputStyle, padding: '10px 12px' }} />
+                      <button type="button" onClick={() => setF('specs', form.specs.filter((_, j) => j !== i))} title="Quitar" style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${C.line2}`, background: C.panel2, color: C.muted, cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0 }}><i className="ph ph-x" /></button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setF('specs', [...form.specs, { label: '', value: '' }])} style={{ justifySelf: 'start', display: 'inline-flex', alignItems: 'center', gap: 6, border: `1px dashed ${C.line2}`, background: 'transparent', color: C.amber, borderRadius: 10, padding: '9px 13px', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' }}><i className="ph ph-plus" /> Agregar especificación</button>
+                </div>
+              </div>
               {/* Toggles */}
               <div style={{ display: 'grid', gap: 12, background: C.panel2, border: `1px solid ${C.line}`, borderRadius: 12, padding: '14px 16px' }}>
                 {[

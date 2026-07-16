@@ -1,4 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Headers, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { verifySupabaseToken } from '../common/supabase-auth';
 import { z } from 'zod';
 import { QuotesService } from './quotes.service';
@@ -28,6 +29,9 @@ export class QuotesController {
   constructor(private readonly quotes: QuotesService) {}
 
   /** Público: los invitados también pueden cotizar. Si viene Bearer, se liga al usuario. */
+  // Abierto a invitados y además cotiza flete (que sale a la API de Google, y esa se
+  // paga por petición): sin límite, es spam y factura ajena.
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post()
   async create(@Body() body: unknown, @Headers('authorization') auth?: string) {
     const parsed = quoteSchema.safeParse(body);

@@ -56,9 +56,10 @@ export const defaultTheme: Theme = {
       buttonStyle: 'solid',
       buttonRadius: '6px',
     },
-    // Orden de la home según el diseño SEGAshop. services/banners/blog/
-    // success-cases quedan implementadas pero desactivadas por defecto
-    // (el admin puede reactivarlas): el diseño de referencia no las incluye.
+    // Orden de la home según el diseño SEGAshop. services y blog quedan
+    // implementadas pero desactivadas por defecto (el admin puede reactivarlas):
+    // el diseño de referencia no las incluye. banners y success-cases se retiraron
+    // en jul 2026 (legacy y decisión del cliente, respectivamente).
     sections: [
       { key: 'home.hero', enabled: true, order: 0 },
       { key: 'home.categories', enabled: true, order: 1 },
@@ -70,9 +71,7 @@ export const defaultTheme: Theme = {
       { key: 'home.brands', enabled: true, order: 7 },
       { key: 'home.faq', enabled: true, order: 8 },
       { key: 'home.services', enabled: false, order: 9 },
-      { key: 'home.banners', enabled: false, order: 10 },
       { key: 'home.blog', enabled: false, order: 11 },
-      { key: 'home.success-cases', enabled: false, order: 12 },
     ],
     // Identidad de marca: se sube desde el admin (Diseño del sitio → Identidad
     // de marca). Vacío ⇒ el sitio usa el logo de texto y el favicon por defecto.
@@ -230,8 +229,6 @@ export const defaultTheme: Theme = {
       ],
       ventajasEyebrow: 'Ventajas',
       ventajasTitle: 'Por qué elegirnos',
-      brandsEyebrow: 'Trabajamos con las marcas líderes de la industria',
-      brands: ['CAT', 'KOMATSU', 'KUBOTA', 'JCB', 'VOLVO', 'BOBCAT'],
       ctaTitle: '¿Listo para poner tu obra en marcha?',
       ctaSubtitle: 'Cotiza la maquinaria que tu proyecto necesita. Entrega en obra, equipos certificados y asesoría de nuestros especialistas.',
       ctaPrimary: 'Solicitar cotización',
@@ -247,6 +244,16 @@ export const defaultTheme: Theme = {
       eyebrowColor: null,
       titleColor: null,
       ctaColor: null,
+    },
+    // Sección Blog del home. Las entradas se gestionan en el módulo Blog.
+    blog: { limit: 3 },
+    // Banda de marcas del home + el listado de /quienes-somos: UNA sola lista.
+    // (Antes el home leía el copy `home.brands.list` y /quienes-somos su propio
+    // token, y ya se habían despegado.)
+    brands: {
+      title: 'Marcas con las que trabajamos',
+      eyebrow: 'Trabajamos con las marcas líderes de la industria',
+      list: ['CAT', 'Komatsu', 'Volvo CE', 'JCB', 'Yale', 'Bobcat'],
     },
     // Sección 6 · Oferta / Promoción (home). Colores null ⇒ heredan del tema.
     offer: {
@@ -287,6 +294,7 @@ export const defaultTheme: Theme = {
       whatsapp: '833 224 56 78',
       email: 'info@maqserv24.com',
       hours: 'Lun–Sáb · 8:00–18:00',
+      address: '',
       urgent: { show: true, eyebrow: 'Renta urgente', title: '¿Necesitas equipo hoy mismo?', ctaLabel: 'Llamar ahora' },
       needs: ['Rentar equipo', 'Cotización', 'Soporte técnico', 'Otro'],
       branches: [
@@ -305,19 +313,13 @@ export const defaultTheme: Theme = {
         { title: 'Empresa', links: [
           { label: 'Quiénes somos', href: '/quienes-somos' },
           { label: 'Blog', href: '/blog' },
-          { label: 'Vacantes', href: '/contacto' },
-          { label: 'Prensa', href: '/contacto' },
         ] },
-        { title: 'Productos', links: [
-          { label: 'Centro de ayuda', href: '/contacto' },
+        { title: 'Catálogo', links: [
           { label: 'Productos', href: '/productos' },
-          { label: 'Sectores estratégicos', href: '/productos' },
+          { label: 'Categorías', href: '/categorias' },
         ] },
         { title: 'Ayuda', links: [
-          { label: 'Centro de ayuda', href: '/contacto' },
           { label: 'Rastrear pedido', href: '/rastreo' },
-          { label: 'Devoluciones', href: '/contacto' },
-          { label: 'Garantías', href: '/contacto' },
           { label: 'Contacto', href: '/contacto' },
         ] },
       ],
@@ -328,6 +330,37 @@ export const defaultTheme: Theme = {
         { label: 'wa', href: '' },
       ],
       copyright: '',
+    },
+    // Legal: vacío por defecto ⇒ el sitio usa LEGAL_DEFAULTS (plantilla) hasta que se edite.
+    legal: {
+      terms: { updated: '', intro: '', sections: [] },
+      privacy: { updated: '', intro: '', sections: [] },
+    },
+    // Cobro del checkout (Panel → Pagos). IVA apagado por defecto: se activa cuando el
+    // cliente lo decida; así lo que muestra el carrito = lo que cobra la orden.
+    checkout: {
+      tax: { enabled: false, rate: 16, label: 'IVA', included: false },
+      operator: { enabled: true, amount: 8000, label: 'Incluir operador certificado', help: 'Operador con seguro y viáticos por equipo.' },
+      // Traslado (Panel → Traslado). Arranca en 'quote' ("A cotizar", sin cobro) para no
+      // cobrar una tarifa inventada: el cliente define la suya y cambia a 'km'.
+      freight: {
+        enabled: true,
+        mode: 'quote',
+        ratePerKm: 35,
+        base: 0,
+        freeKm: 0,
+        minCharge: 0,
+        maxKm: 300,
+        roundTrip: true,
+        perUnit: false,
+        rentalOnly: true,
+        flatAmount: 0,
+        label: 'Traslado',
+        help: 'Se calcula por la distancia desde nuestra base hasta tu ubicación.',
+        quoteText: 'A cotizar',
+        origin: '',
+      },
+      note: 'El traslado se cotiza según ubicación.',
     },
     quoteMode: false,
     defaultMode: 'auto',
@@ -405,14 +438,17 @@ export const defaultTheme: Theme = {
       'home.brands.title': 'Marcas con las que trabajamos',
       'home.brands.list': 'CAT, Komatsu, Volvo CE, JCB, Yale, Bobcat',
       'home.faq.eyebrow': 'Resolvemos tus dudas',
+      'home.services.eyebrow': 'Qué hacemos',
       'home.services.title': 'Nuestros servicios',
+      // El eyebrow va aparte del título: pasarle el mismo texto a los dos hacía que
+      // `CenterHead` lo pintara duplicado (chiquito arriba y grande abajo).
+      'home.blog.eyebrow': 'Bitácora',
       'home.blog.title': 'Últimas noticias',
       'home.blog.readMore': 'Leer más',
       'blog.hero.eyebrow': 'Diario de obra · Nº 24',
       'blog.hero.title': 'Bitácora',
       'blog.hero.subtitle': 'Noticias, guías y buenas prácticas sobre maquinaria pesada — directo desde el terreno.',
       'home.faq.title': 'Preguntas frecuentes',
-      'home.successCases.title': 'Casos de éxito',
       'product.card.from': 'Desde',
       'product.card.add': 'Agregar',
       'product.card.view': 'Ver',
@@ -532,6 +568,24 @@ export const defaultTheme: Theme = {
       'vendor.apply.message': 'Cuéntanos de tu negocio',
       'vendor.apply.submit': 'Enviar solicitud',
       'vendor.apply.pending': 'Tu solicitud está en revisión. Te avisaremos cuando sea aprobada.',
+      'vendor.apply.pendingTitle': 'Solicitud enviada',
+      'vendor.apply.sent': 'Lo que nos enviaste',
+      // Estado "sin acceso" de quien SÍ solicitó (rechazado o revocado). Antes a esta
+      // persona el sitio le mostraba el formulario vacío, sin explicación.
+      'vendor.apply.inactiveTitle': 'Tu cuenta de vendedor no está activa',
+      'vendor.apply.inactive': 'Puede que tu solicitud no haya sido aprobada o que se haya retirado tu acceso. Si crees que es un error, contáctanos.',
+      'vendor.apply.reapply': 'Volver a solicitar',
+      'vendor.apply.reapplyHint': 'Puedes actualizar tus datos y enviar la solicitud de nuevo.',
+      'vendor.panel.eyebrow': 'Vender con nosotros',
+      'vendor.panel.shop': 'Tu tienda',
+      'vendor.panel.productsHint': 'Publica y administra el equipo que rentas o vendes.',
+      'vendor.panel.ordersHint': 'Lo que te han comprado en el sitio.',
+      'vendor.panel.withdrawsHint': 'Pide tu dinero y revisa el estado de tus retiros.',
+      'vendor.panel.balanceHint': 'Al solicitar un retiro se descuenta de tu saldo. Si se rechaza, se te regresa.',
+      'vendor.orders.title': 'Mis ventas',
+      'vendor.withdraws.title': 'Retiros',
+      'vendor.withdraws.available': 'Disponible',
+      'vendor.back': 'Volver al panel',
       'vendor.products.new': 'Nuevo producto',
       'vendor.products.name': 'Nombre del producto',
       'vendor.products.category': 'Categoría',
@@ -593,6 +647,7 @@ export const defaultTheme: Theme = {
       'nav.contact': 'Contacto',
       'nav.wishlist': 'Favoritos',
       'nav.search': 'Buscar',
+      'nav.menu': 'Menú',
       'topbar.hours': 'Lun–Sáb · 8:00–18:00',
       'topbar.track': 'Rastrear pedido',
       'topbar.sell': 'Vender con nosotros',

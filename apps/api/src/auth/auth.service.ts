@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { prisma } from '@maqserv/db';
 import type { AuthResponse, AuthUser } from '@maqserv/types';
-import { adminCreateUser, adminSetMetadata, passwordGrant, refreshGrant } from '../common/supabase-auth';
+import { adminCreateUser, adminSetMetadata, passwordGrant, refreshGrant, sendPasswordReset } from '../common/supabase-auth';
 
 /**
  * Auth de CLIENTES vía Supabase Auth. Los usuarios legacy se importaron a auth.users
@@ -18,6 +18,8 @@ export class AuthService {
     address: string | null;
     city: string | null;
     zip: string | null;
+    residency?: string | null;
+    created_at?: Date | null;
   }): AuthUser {
     return {
       id: u.id,
@@ -27,6 +29,8 @@ export class AuthService {
       address: u.address,
       city: u.city,
       zip: u.zip,
+      residency: u.residency ?? null,
+      createdAt: u.created_at ? u.created_at.toISOString() : null,
     };
   }
 
@@ -78,5 +82,10 @@ export class AuthService {
     const u = await prisma.users.findUnique({ where: { id: userId } });
     if (!u) throw new UnauthorizedException();
     return this.toAuthUser(u);
+  }
+
+  /** Solicita restablecer contraseña (envía correo por Supabase). Siempre ok (anti-enumeración). */
+  async forgotPassword(email: string, redirectTo?: string): Promise<{ ok: boolean }> {
+    return sendPasswordReset(email, redirectTo);
   }
 }

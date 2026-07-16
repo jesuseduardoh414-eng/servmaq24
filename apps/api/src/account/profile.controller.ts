@@ -10,6 +10,8 @@ const profileSchema = z.object({
   address: z.string().max(250).optional(),
   city: z.string().max(100).optional(),
   zip: z.string().max(12).optional(),
+  /** Estado/región: columna legacy `residency`, hasta ahora sin usar. */
+  residency: z.string().max(100).optional(),
 });
 
 const passwordSchema = z.object({
@@ -28,7 +30,11 @@ export class ProfileController {
       where: { id: req.userId },
       data: { ...parsed.data, updated_at: new Date() },
     });
-    return { id: u.id, name: u.name, email: u.email, phone: u.phone, address: u.address, city: u.city, zip: u.zip };
+    return {
+      id: u.id, name: u.name, email: u.email, phone: u.phone,
+      address: u.address, city: u.city, zip: u.zip,
+      residency: u.residency, createdAt: u.created_at ? u.created_at.toISOString() : null,
+    };
   }
 
   @Post('change-password')

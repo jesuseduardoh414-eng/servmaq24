@@ -11,6 +11,8 @@ export interface ProductFormData {
   price?: number;
   oldPrice?: number | null;
   description?: string;
+  short?: string | null;
+  specs?: Array<{ label: string; value: string }>;
   stock?: number | null;
   brand?: string | null;
   isRental?: boolean;
@@ -32,6 +34,7 @@ export function ProductForm({
   const router = useRouter();
   const isEdit = Boolean(initial.id);
   const [isRental, setIsRental] = useState(Boolean(initial.isRental));
+  const [specs, setSpecs] = useState<Array<{ label: string; value: string }>>(initial.specs ?? []);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const full = { width: '100%' } as const;
@@ -50,6 +53,8 @@ export function ProductForm({
     }
     // checkbox featured → boolean string
     fd.set('featured', fd.get('featured') === 'on' ? 'true' : 'false');
+    // ficha técnica: se serializa a JSON (solo filas con etiqueta)
+    fd.set('specs', JSON.stringify(specs.map((s) => ({ label: s.label.trim(), value: s.value.trim() })).filter((s) => s.label)));
     const res = await fetch(
       isEdit ? `/api/admin/catalog/products/${initial.id}` : '/api/admin/catalog/products',
       { method: isEdit ? 'PATCH' : 'POST', body: fd },
@@ -96,6 +101,9 @@ export function ProductForm({
         <label style={label('')}>Marca
           <Input name="brand" defaultValue={initial.brand ?? ''} style={full} />
         </label>
+        <label style={label('')}>Descripción corta (resumen que se muestra arriba de la ficha)
+          <Input name="short" defaultValue={initial.short ?? ''} placeholder="Miniexcavadora compacta para espacios reducidos…" style={full} />
+        </label>
         <label style={label('')}>Descripción
           <textarea
             name="description"
@@ -121,6 +129,26 @@ export function ProductForm({
             <Input name="rentalFreight" type="number" step="0.01" min={0} defaultValue={initial.rentalFreight ?? ''} style={full} />
           </label>
         ) : null}
+      </Card>
+
+      <Card style={{ display: 'grid', gap: '.8rem' }}>
+        <strong>Ficha técnica</strong>
+        <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+          Los primeros 3 se muestran como cuadros destacados en el producto; todos aparecen en la pestaña “Ficha técnica”.
+        </p>
+        <input type="hidden" name="specs" />
+        {specs.length > 0 ? (
+          <div style={{ display: 'grid', gap: '.5rem' }}>
+            {specs.map((s, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '.5rem', alignItems: 'center' }}>
+                <Input value={s.label} onChange={(e) => setSpecs(specs.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} placeholder="Peso operativo" style={full} />
+                <Input value={s.value} onChange={(e) => setSpecs(specs.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))} placeholder="3,500 kg" style={full} />
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSpecs(specs.filter((_, j) => j !== i))} aria-label="Quitar">✕</Button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <div><Button type="button" variant="outline" size="sm" onClick={() => setSpecs([...specs, { label: '', value: '' }])}>+ Agregar especificación</Button></div>
       </Card>
 
       <Card style={{ display: 'grid', gap: '.8rem' }}>
